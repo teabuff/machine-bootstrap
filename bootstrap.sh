@@ -59,12 +59,13 @@ echo "==> 7/7 Backfill existing human users (uid 1000-29999 with a home dir)"
 awk -F: '$3 >= 1000 && $3 < 30000 && $6 ~ /^\/home\// {print $1":"$6}' /etc/passwd |
 while IFS=: read -r user home; do
   [ -d "$home" ] || continue
-  # shell -> zsh (skip service-ish accounts that deliberately use nologin/false)
+  # Only treat bash/zsh accounts as human; anything else (sh, nologin, false)
+  # is a service account (e.g. linuxbrew) whose shell choice is deliberate.
   shell=$(getent passwd "$user" | cut -d: -f7)
   case "$shell" in
-    */nologin|*/false) echo "  $user: skipping (shell $shell)"; continue ;;
     */zsh) ;;
-    *) chsh -s /usr/bin/zsh "$user"; echo "  $user: shell -> zsh" ;;
+    */bash) chsh -s /usr/bin/zsh "$user"; echo "  $user: shell -> zsh" ;;
+    *) echo "  $user: skipping service account (shell $shell)"; continue ;;
   esac
   # nix-direnv config (don't overwrite an existing one)
   if [ ! -f "$home/.config/direnv/direnvrc" ]; then

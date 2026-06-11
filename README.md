@@ -21,7 +21,7 @@ a drifted machine).
 | Layer | Mechanism |
 |---|---|
 | zsh for new users | `DSHELL` in `/etc/adduser.conf` + `useradd -D -s` |
-| zsh for existing users | `chsh` for human accounts (uid 1000–29999, skips nologin) |
+| zsh for existing users | `chsh` for human accounts (uid 1000–29999 currently on bash/zsh; service accounts on sh/nologin/false are left alone) |
 | Nix | Determinate installer, multi-user daemon; PATH via `/etc/profile.d` |
 | direnv + nix-direnv | Dedicated Nix profile `/nix/var/nix/profiles/direnv` (GC root, untouched by Determinate's managed default profile); binary symlinked to `/usr/local/bin/direnv` |
 | direnv zsh hook | `/etc/zsh/zshrc` (all users, idempotent) |
