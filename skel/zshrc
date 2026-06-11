@@ -1,0 +1,56 @@
+# Default zshrc for new users — a sensible, framework-free baseline.
+# This file is yours: edit or replace it freely. Machine-wide config
+# (direnv hook, Nix PATH) lives in /etc/zsh/zshrc and /etc/profile.d,
+# so it keeps working even if you empty this file.
+
+# --- History ---
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt SHARE_HISTORY            # share history across open sessions
+setopt HIST_IGNORE_ALL_DUPS     # drop older duplicates
+setopt HIST_IGNORE_SPACE        # commands starting with a space stay out
+setopt HIST_REDUCE_BLANKS
+
+# --- Behaviour ---
+setopt AUTO_CD                  # a bare directory name cd's into it
+setopt INTERACTIVE_COMMENTS     # allow # comments at the prompt
+setopt NO_BEEP
+unsetopt FLOW_CONTROL           # frees ctrl-s / ctrl-q
+
+# --- Completion ---
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select                      # arrow-key menu
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'  # case-insensitive
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' rehash true                      # find new binaries
+
+# --- Keys ---
+bindkey -e                              # emacs-style (use `bindkey -v` for vi)
+bindkey '^[[H'    beginning-of-line     # Home
+bindkey '^[[F'    end-of-line           # End
+bindkey '^[[3~'   delete-char           # Delete
+bindkey '^[[1;5C' forward-word          # Ctrl-Right
+bindkey '^[[1;5D' backward-word         # Ctrl-Left
+# Type a prefix, then Up/Down searches history for it
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+
+# --- Prompt: user@host ~/dir (git-branch) % ---
+autoload -Uz vcs_info
+_prompt_vcs() { vcs_info }
+precmd_functions+=(_prompt_vcs)
+zstyle ':vcs_info:git:*' formats ' %F{magenta}(%b)%f'
+setopt PROMPT_SUBST
+PROMPT='%F{green}%n@%m%f %F{blue}%~%f${vcs_info_msg_0_} %# '
+
+# --- Colors & aliases ---
+alias ls='ls --color=auto'
+alias ll='ls -lah'
+alias grep='grep --color=auto'
+
+export EDITOR=vim
+path+=(~/.local/bin)

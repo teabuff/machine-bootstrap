@@ -49,11 +49,9 @@ fi
 echo "==> 6/7 Seed /etc/skel for future users"
 mkdir -p /etc/skel/.config/direnv
 echo "source $DIRENV_PROFILE/share/nix-direnv/direnvrc" > /etc/skel/.config/direnv/direnvrc
-# An existing .zshrc (even minimal) stops zsh-newuser-install prompting on first login
-[ -f /etc/skel/.zshrc ] || cat > /etc/skel/.zshrc <<'EOF'
-# Default user zshrc. direnv and Nix are configured system-wide
-# (/etc/zsh/zshrc and /etc/profile.d/nix.sh); add personal config below.
-EOF
+# Baseline user zshrc (also stops zsh-newuser-install prompting on first login).
+# skel is system-owned, so overwrite on every run to converge with the repo.
+install -m 0644 "$(cd "$(dirname "$0")" && pwd)/skel/zshrc" /etc/skel/.zshrc
 
 echo "==> 7/7 Backfill existing human users (uid 1000-29999 with a home dir)"
 awk -F: '$3 >= 1000 && $3 < 30000 && $6 ~ /^\/home\// {print $1":"$6}' /etc/passwd |
