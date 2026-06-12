@@ -35,7 +35,7 @@ echo "==> 4/8 direnv + nix-direnv in a dedicated system-wide Nix profile"
 # Dedicated profile (not Determinate's managed default profile) so nix
 # upgrades never touch it; profiles are GC roots so it survives GC.
 if [ ! -e "$DIRENV_PROFILE/share/nix-direnv/direnvrc" ]; then
-  "$NIX" profile install --profile "$DIRENV_PROFILE" nixpkgs#direnv nixpkgs#nix-direnv
+  "$NIX" profile add --profile "$DIRENV_PROFILE" nixpkgs#direnv nixpkgs#nix-direnv
 fi
 ln -sf "$DIRENV_PROFILE/bin/direnv" /usr/local/bin/direnv
 
@@ -43,7 +43,7 @@ echo "==> 5/8 zellij in a dedicated system-wide Nix profile"
 # Shared binary so the zellij-web@ systemd template (setup-zellij-web.sh)
 # and every user's terminal run the same version (client/server must match).
 if [ ! -x "$ZELLIJ_PROFILE/bin/zellij" ]; then
-  "$NIX" profile install --profile "$ZELLIJ_PROFILE" nixpkgs#zellij
+  "$NIX" profile add --profile "$ZELLIJ_PROFILE" nixpkgs#zellij
 fi
 ln -sf "$ZELLIJ_PROFILE/bin/zellij" /usr/local/bin/zellij
 
