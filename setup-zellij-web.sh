@@ -42,6 +42,7 @@ id "$ZW_USER" &>/dev/null ||
   { echo "❌ user '$ZW_USER' does not exist; create it first." >&2; exit 1; }
 
 ZW_GROUP=$(id -gn "$ZW_USER")
+USER_HOME=$(getent passwd "$ZW_USER" | cut -d: -f6)
 ENV_FILE="$ETC_DIR/$ZW_USER.env"
 CERT_DIR="$ETC_DIR/$ZW_USER"
 
@@ -61,7 +62,19 @@ for cfg in /home/*/.config/code-server/config.yaml; do
   fi
 done
 
-# 4. Converge the systemd template unit (zellij ships none)
+# 4. Seed the default zellij config if the user has none (a fresh account
+# without one makes the web server exit silently right after startup;
+# never overwrite an existing config — it's the user's personal file)
+ZW_CFG="$USER_HOME/.config/zellij/config.kdl"
+if [ ! -f "$ZW_CFG" ]; then
+  echo "⚙️  Seeding default zellij config at $ZW_CFG..."
+  install -d -o "$ZW_USER" -g "$ZW_GROUP" \
+    "$USER_HOME/.config" "$USER_HOME/.config/zellij"
+  "$ZELLIJ_BIN" setup --dump-config > "$ZW_CFG"
+  chown "$ZW_USER:$ZW_GROUP" "$ZW_CFG"
+fi
+
+# 5. Converge the systemd template unit (zellij ships none)
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 cat > "$TMP" <<EOF
@@ -89,7 +102,7 @@ if ! { [ -f "$UNIT" ] && cmp -s "$TMP" "$UNIT"; }; then
   CHANGED=1
 fi
 
-# 5. Self-signed cert (zellij always enforces HTTPS on non-loopback binds)
+# 6. Self-signed cert (zellij always enforces HTTPS on non-loopback binds)
 install -d -m 0755 "$ETC_DIR"
 install -d -m 0750 -o root -g "$ZW_GROUP" "$CERT_DIR"
 if [ ! -f "$CERT_DIR/cert.pem" ]; then
@@ -104,7 +117,7 @@ if [ ! -f "$CERT_DIR/cert.pem" ]; then
   CHANGED=1
 fi
 
-# 6. Converge the per-user env file
+# 7. Converge the per-user env file
 cat > "$TMP" <<EOF
 ZW_IP=$DOCKER_GW
 ZW_PORT=$ZW_PORT
@@ -119,14 +132,14 @@ else
   CHANGED=1
 fi
 
-# 7. Web login token: create one on first provision (plaintext is only
+# 8. Web login token: create one on first provision (plaintext is only
 # available at creation time; zellij stores it hashed and can't re-show it)
 NEW_TOKEN=""
 if [ -z "$(sudo -H -u "$ZW_USER" "$ZELLIJ_BIN" web --list-tokens 2>/dev/null)" ]; then
   NEW_TOKEN=$(sudo -H -u "$ZW_USER" "$ZELLIJ_BIN" web --create-token | tail -1)
 fi
 
-# 8. Let the user manage their own instance (exact unit names only — no
+# 9. Let the user manage their own instance (exact unit names only — no
 # wildcards, so they can't touch other users' services; status needs no sudo)
 cat > "$TMP" <<EOF
 $ZW_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start zellij-web@$ZW_USER.service, /usr/bin/systemctl stop zellij-web@$ZW_USER.service, /usr/bin/systemctl restart zellij-web@$ZW_USER.service
@@ -134,14 +147,14 @@ EOF
 visudo -cf "$TMP" >/dev/null
 install -m 0440 "$TMP" "/etc/sudoers.d/zellij-web-${ZW_USER//./_}"
 
-# 9. Enable at boot; restart only if something changed or it isn't running
+# 10. Enable at boot; restart only if something changed or it isn't running
 systemctl enable "zellij-web@$ZW_USER"
 if [ "$CHANGED" -eq 1 ] || ! systemctl is-active --quiet "zellij-web@$ZW_USER"; then
   echo "🚀 Restarting zellij-web@$ZW_USER..."
   systemctl restart "zellij-web@$ZW_USER"
 fi
 
-# 10. Final output
+# 11. Final output
 echo "------------------------------------------------------"
 echo "🎉 zellij web ready for '$ZW_USER'."
 echo "🟢 Service Status: $(systemctl is-active "zellij-web@$ZW_USER")"
