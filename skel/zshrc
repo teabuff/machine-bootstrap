@@ -3,6 +3,13 @@
 # (direnv hook, Nix PATH) lives in /etc/zsh/zshrc and /etc/profile.d,
 # so it keeps working even if you empty this file.
 
+# --- Terminal ---
+# Some web terminals (e.g. zellij web) start shells without a usable TERM,
+# which breaks colors and TUI apps. Fall back to a sane default.
+if [[ -z "$TERM" || "$TERM" == "dumb" ]]; then
+  export TERM="xterm-256color"
+fi
+
 # --- History ---
 HISTFILE=~/.zsh_history
 HISTSIZE=50000
