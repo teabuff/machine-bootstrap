@@ -3,6 +3,7 @@
 #   - zsh as default shell for new and existing human users
 #   - Determinate Nix (multi-user daemon install)
 #   - direnv + nix-direnv system-wide, hooked into zsh for everyone
+#   - zellij system-wide (per-user setup lives in setup-zellij-web.sh)
 #
 # Idempotent: safe to re-run on an already-bootstrapped machine.
 # Usage: sudo ./bootstrap.sh
@@ -12,24 +13,25 @@ set -euo pipefail
 
 NIX=/nix/var/nix/profiles/default/bin/nix
 DIRENV_PROFILE=/nix/var/nix/profiles/direnv
+ZELLIJ_PROFILE=/nix/var/nix/profiles/zellij
 
-echo "==> 1/7 Base packages (zsh, curl, git)"
+echo "==> 1/8 Base packages (zsh, curl, git)"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 apt-get install -qy zsh curl git
 
-echo "==> 2/7 Determinate Nix (multi-user)"
+echo "==> 2/8 Determinate Nix (multi-user)"
 if [ ! -x "$NIX" ]; then
   curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
 else
   echo "already installed: $($NIX --version)"
 fi
 
-echo "==> 3/7 Default shell for newly created users"
+echo "==> 3/8 Default shell for newly created users"
 sed -i 's|^#\?\s*DSHELL=.*|DSHELL=/usr/bin/zsh|' /etc/adduser.conf
 useradd -D -s /usr/bin/zsh
 
-echo "==> 4/7 direnv + nix-direnv in a dedicated system-wide Nix profile"
+echo "==> 4/8 direnv + nix-direnv in a dedicated system-wide Nix profile"
 # Dedicated profile (not Determinate's managed default profile) so nix
 # upgrades never touch it; profiles are GC roots so it survives GC.
 if [ ! -e "$DIRENV_PROFILE/share/nix-direnv/direnvrc" ]; then
@@ -37,7 +39,15 @@ if [ ! -e "$DIRENV_PROFILE/share/nix-direnv/direnvrc" ]; then
 fi
 ln -sf "$DIRENV_PROFILE/bin/direnv" /usr/local/bin/direnv
 
-echo "==> 5/7 direnv zsh hook for all users"
+echo "==> 5/8 zellij in a dedicated system-wide Nix profile"
+# Shared binary so the zellij-web@ systemd template (setup-zellij-web.sh)
+# and every user's terminal run the same version (client/server must match).
+if [ ! -x "$ZELLIJ_PROFILE/bin/zellij" ]; then
+  "$NIX" profile install --profile "$ZELLIJ_PROFILE" nixpkgs#zellij
+fi
+ln -sf "$ZELLIJ_PROFILE/bin/zellij" /usr/local/bin/zellij
+
+echo "==> 6/8 direnv zsh hook for all users"
 if ! grep -q 'direnv hook zsh' /etc/zsh/zshrc; then
   cat >> /etc/zsh/zshrc <<'EOF'
 
@@ -46,14 +56,14 @@ command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 EOF
 fi
 
-echo "==> 6/7 Seed /etc/skel for future users"
+echo "==> 7/8 Seed /etc/skel for future users"
 mkdir -p /etc/skel/.config/direnv
 echo "source $DIRENV_PROFILE/share/nix-direnv/direnvrc" > /etc/skel/.config/direnv/direnvrc
 # Baseline user zshrc (also stops zsh-newuser-install prompting on first login).
 # skel is system-owned, so overwrite on every run to converge with the repo.
 install -m 0644 "$(cd "$(dirname "$0")" && pwd)/skel/zshrc" /etc/skel/.zshrc
 
-echo "==> 7/7 Backfill existing human users (uid 1000-29999 with a home dir)"
+echo "==> 8/8 Backfill existing human users (uid 1000-29999 with a home dir)"
 awk -F: '$3 >= 1000 && $3 < 30000 && $6 ~ /^\/home\// {print $1":"$6}' /etc/passwd |
 while IFS=: read -r user home; do
   [ -d "$home" ] || continue
@@ -78,5 +88,6 @@ echo "==> Done. Verification:"
 grep '^DSHELL' /etc/adduser.conf
 useradd -D | grep -i shell
 /usr/local/bin/direnv --version
+/usr/local/bin/zellij --version
 tail -2 /etc/zsh/zshrc
 echo "New users: adduser <name>  ->  zsh + nix + direnv ready. Per-repo: direnv allow."
