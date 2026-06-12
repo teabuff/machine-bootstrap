@@ -42,8 +42,13 @@ ln -sf "$DIRENV_PROFILE/bin/direnv" /usr/local/bin/direnv
 echo "==> 5/8 zellij in a dedicated system-wide Nix profile"
 # Shared binary so the zellij-web@ systemd template (setup-zellij-web.sh)
 # and every user's terminal run the same version (client/server must match).
-if [ ! -x "$ZELLIJ_PROFILE/bin/zellij" ]; then
-  "$NIX" profile add --profile "$ZELLIJ_PROFILE" nixpkgs#zellij
+# Pinned to 0.44.1: the web client in 0.44.2-0.44.3 doesn't deliver Escape
+# (https://github.com/zellij-org/zellij/issues/5190). Unpin when fixed.
+ZELLIJ_VERSION=0.44.1
+ZELLIJ_NIXPKGS=github:NixOS/nixpkgs/01fbdeef22b76df85ea168fbfe1bfd9e63681b30
+if [ "$("$ZELLIJ_PROFILE/bin/zellij" --version 2>/dev/null)" != "zellij $ZELLIJ_VERSION" ]; then
+  "$NIX" profile remove --profile "$ZELLIJ_PROFILE" zellij 2>/dev/null || true
+  "$NIX" profile add --profile "$ZELLIJ_PROFILE" "$ZELLIJ_NIXPKGS#zellij"
 fi
 ln -sf "$ZELLIJ_PROFILE/bin/zellij" /usr/local/bin/zellij
 
