@@ -76,14 +76,22 @@ else
   CHANGED=1
 fi
 
-# 6. Enable at boot; restart only if config changed or it isn't running
+# 6. Let the user manage their own instance (exact unit names only — no
+# wildcards, so they can't touch other users' services; status needs no sudo)
+cat > "$TMP" <<EOF
+$CS_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start code-server@$CS_USER.service, /usr/bin/systemctl stop code-server@$CS_USER.service, /usr/bin/systemctl restart code-server@$CS_USER.service
+EOF
+visudo -cf "$TMP" >/dev/null
+install -m 0440 "$TMP" "/etc/sudoers.d/code-server-${CS_USER//./_}"
+
+# 7. Enable at boot; restart only if config changed or it isn't running
 systemctl enable "code-server@$CS_USER"
 if [ "$CHANGED" -eq 1 ] || ! systemctl is-active --quiet "code-server@$CS_USER"; then
   echo "🚀 Restarting code-server@$CS_USER..."
   systemctl restart "code-server@$CS_USER"
 fi
 
-# 7. Final output
+# 8. Final output
 echo "------------------------------------------------------"
 echo "🎉 code-server ready for '$CS_USER'."
 echo "🟢 Service Status: $(systemctl is-active "code-server@$CS_USER")"

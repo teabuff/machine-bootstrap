@@ -126,14 +126,22 @@ if [ -z "$(sudo -H -u "$ZW_USER" "$ZELLIJ_BIN" web --list-tokens 2>/dev/null)" ]
   NEW_TOKEN=$(sudo -H -u "$ZW_USER" "$ZELLIJ_BIN" web --create-token | tail -1)
 fi
 
-# 8. Enable at boot; restart only if something changed or it isn't running
+# 8. Let the user manage their own instance (exact unit names only — no
+# wildcards, so they can't touch other users' services; status needs no sudo)
+cat > "$TMP" <<EOF
+$ZW_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start zellij-web@$ZW_USER.service, /usr/bin/systemctl stop zellij-web@$ZW_USER.service, /usr/bin/systemctl restart zellij-web@$ZW_USER.service
+EOF
+visudo -cf "$TMP" >/dev/null
+install -m 0440 "$TMP" "/etc/sudoers.d/zellij-web-${ZW_USER//./_}"
+
+# 9. Enable at boot; restart only if something changed or it isn't running
 systemctl enable "zellij-web@$ZW_USER"
 if [ "$CHANGED" -eq 1 ] || ! systemctl is-active --quiet "zellij-web@$ZW_USER"; then
   echo "🚀 Restarting zellij-web@$ZW_USER..."
   systemctl restart "zellij-web@$ZW_USER"
 fi
 
-# 9. Final output
+# 10. Final output
 echo "------------------------------------------------------"
 echo "🎉 zellij web ready for '$ZW_USER'."
 echo "🟢 Service Status: $(systemctl is-active "zellij-web@$ZW_USER")"
