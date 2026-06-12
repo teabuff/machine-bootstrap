@@ -86,6 +86,8 @@ Wants=docker.service
 
 [Service]
 User=%i
+# new sessions inherit the server's cwd; "~" = home of User= (%h would not be)
+WorkingDirectory=~
 EnvironmentFile=$ETC_DIR/%i.env
 ExecStart=$ZELLIJ_BIN web --ip \${ZW_IP} --port \${ZW_PORT} --cert \${ZW_CERT} --key \${ZW_KEY}
 Restart=always
