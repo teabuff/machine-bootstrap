@@ -120,3 +120,54 @@ variable "stack_dir" {
   description = "Absolute directory on the server where the compose stack lives."
   default     = "/opt/pangolin-stack"
 }
+
+# ---------------------------------------------------------------------------
+# Headless bootstrap (admin) + SSO wiring — runs on the box after deploy, over
+# loopback, so there is no UI/passkey step for provisioning. A human still
+# enrols a passkey once if they intend to log in interactively.
+# ---------------------------------------------------------------------------
+
+variable "pangolin_admin_email" {
+  type        = string
+  description = "First Pangolin server admin, seeded via `pangctl set-admin-credentials`. Use a lower-case address (pangctl mishandles upper-case)."
+  validation {
+    condition     = var.pangolin_admin_email == lower(var.pangolin_admin_email)
+    error_message = "pangolin_admin_email must be lower-case."
+  }
+}
+
+variable "pangolin_admin_password" {
+  type        = string
+  description = "Password for the Pangolin server admin. Kept in state, never committed."
+  sensitive   = true
+}
+
+variable "enable_sso" {
+  type        = bool
+  description = "Wire Pangolin <-> Pocket ID SSO headlessly after deploy (provision-sso.sh over loopback). The admin is always seeded regardless."
+  default     = true
+}
+
+variable "sso_identity_file" {
+  type        = string
+  description = "Optional path to a provision-sso identity manifest (groups/users seeded into Pocket ID). Empty = wire SSO only; users auto-provision on first login. Keep realm specifics out of git."
+  default     = ""
+}
+
+variable "pangolin_org_id" {
+  type        = string
+  description = "Optional Pangolin org id to map Pocket ID group claims onto (JMESPath). Empty = skip org/role mapping."
+  default     = ""
+}
+
+variable "idp_role_mapping" {
+  type        = string
+  description = "JMESPath expression mapping IdP claims to a Pangolin role (used only when pangolin_org_id is set)."
+  default     = "Member"
+}
+
+variable "idp_org_mapping" {
+  type        = string
+  description = "JMESPath expression deciding org membership (used only when pangolin_org_id is set)."
+  default     = "true"
+}

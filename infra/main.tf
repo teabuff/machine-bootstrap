@@ -12,7 +12,29 @@ locals {
     pocket_id_version        = var.pocket_id_version
     pocket_id_host           = local.pocket_id_host
     pocket_id_encryption_key = random_id.pocket_id_encryption_key.b64_std
+    pocket_id_static_api_key = random_id.pocket_id_static_api_key.hex
   })
+
+  # provision-sso.sh config, rendered from vars. Endpoints are loopback because
+  # the configure step runs ON the box (no public DNS/cert needed at apply time).
+  # JMESPath/password values are double-quoted; avoid " and $ in the password.
+  sso_conf = <<-EOT
+    POCKETID_URL="http://127.0.0.1:1411"
+    POCKETID_API_KEY="${random_id.pocket_id_static_api_key.hex}"
+    PANGOLIN_URL="http://127.0.0.1:3000"
+    PANGOLIN_ADMIN_EMAIL="${var.pangolin_admin_email}"
+    PANGOLIN_ADMIN_PASSWORD="${var.pangolin_admin_password}"
+    OIDC_CLIENT_ID="pangolin"
+    IDP_NAME="pocket-id"
+    SSO_STATE_FILE="${var.stack_dir}/.sso-state"
+    PANGOLIN_ORG_ID="${var.pangolin_org_id}"
+    IDP_ROLE_MAPPING="${var.idp_role_mapping}"
+    IDP_ORG_MAPPING="${var.idp_org_mapping}"
+  EOT
+
+  # Optional identity manifest (groups/users seeded into Pocket ID). Empty by
+  # default → SSO is wired but users auto-provision on first login.
+  sso_identity = var.sso_identity_file != "" ? file(pathexpand(var.sso_identity_file)) : "# no identities declared — users auto-provision on first OIDC login\n"
 
   pangolin_config = templatefile("${path.module}/files/config/config.yml.tftpl", {
     dashboard_host  = local.dashboard_host
@@ -39,6 +61,10 @@ resource "random_id" "pangolin_secret" {
 
 resource "random_id" "pocket_id_encryption_key" {
   byte_length = 32 # -> base64, equivalent to `openssl rand -base64 32`
+}
+
+resource "random_id" "pocket_id_static_api_key" {
+  byte_length = 24 # -> 48 hex chars (well over Pocket ID's >=16 minimum)
 }
 
 # --- DNS: apex + wildcard, both DNS-only (Pangolin needs the raw IP) ---
@@ -127,4 +153,66 @@ resource "null_resource" "deploy" {
     cloudflare_dns_record.apex,
     cloudflare_dns_record.wildcard,
   ]
+}
+
+# --- Configure: headless admin + SSO, over loopback on the box (no UI) ---
+# This is what removes the old "create the admin / wire SSO in the dashboard"
+# manual steps. The app-plane has no Terraform provider, so we drive each
+# product's API with idempotent bash (provision-sso.sh) invoked here.
+resource "null_resource" "configure" {
+  # Re-run only when the config-plane inputs change, NOT on every redeploy
+  # (admin + SSO are idempotent; depends_on still orders us after deploy on the
+  # first apply). A version bump no longer re-runs the whole SSO dance.
+  triggers = {
+    sso_conf     = sha1(local.sso_conf)
+    sso_identity = sha1(local.sso_identity)
+    bootstrap    = filesha1("${path.module}/files/bootstrap.sh")
+    provision    = filesha1("${path.module}/../provision-sso.sh")
+    sso_lib      = filesha1("${path.module}/../lib/sso.sh")
+    enable_sso   = var.enable_sso
+  }
+
+  connection {
+    type        = "ssh"
+    host        = local.ssh_host
+    user        = var.ssh_user
+    port        = var.ssh_port
+    private_key = file(pathexpand(var.ssh_private_key_path))
+  }
+
+  # The SSO library lives under lib/ next to provision-sso.sh on the box.
+  provisioner "remote-exec" {
+    inline = ["mkdir -p ${var.stack_dir}/lib"]
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/files/bootstrap.sh"
+    destination = "${var.stack_dir}/bootstrap.sh"
+  }
+  provisioner "file" {
+    source      = "${path.module}/../provision-sso.sh"
+    destination = "${var.stack_dir}/provision-sso.sh"
+  }
+  provisioner "file" {
+    source      = "${path.module}/../lib/sso.sh"
+    destination = "${var.stack_dir}/lib/sso.sh"
+  }
+  provisioner "file" {
+    content     = local.sso_conf # holds admin password + api key
+    destination = "${var.stack_dir}/sso.conf"
+  }
+  provisioner "file" {
+    content     = local.sso_identity
+    destination = "${var.stack_dir}/sso.identity"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod 600 ${var.stack_dir}/sso.conf",
+      "chmod +x ${var.stack_dir}/bootstrap.sh ${var.stack_dir}/provision-sso.sh",
+      "${var.stack_dir}/bootstrap.sh ${var.stack_dir} ${var.enable_sso}",
+    ]
+  }
+
+  depends_on = [null_resource.deploy]
 }

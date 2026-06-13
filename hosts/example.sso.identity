@@ -1,0 +1,16 @@
+# Example identity manifest — declared groups and users, seeded into Pocket ID
+# idempotently (the "import" of pre-existing users/groups, done over the API,
+# never the UI). Copy to a private <realm>.sso.identity and edit.
+#
+# Verbs:
+#   group <name> [friendlyName]
+#   user  <username> "<Display Name>" <email> [group...]
+#
+# Groups must be declared before any user that references them. Re-running
+# converges membership to exactly what's listed here (full replace).
+
+group admins "Administrators"
+group staff  "Staff"
+
+user  jdoe   "Jane Doe"     jane@example.com   admins staff
+user  asmith "Alice Smith"  alice@example.com  staff

@@ -48,20 +48,31 @@ To pin versions for reproducibility, set `pangolin_version` / `gerbil_version` /
 `pocket_id_version` in `terraform.tfvars`. Keep `badger_version` matched to the Pangolin
 release (bump them together).
 
-## One-time manual wiring
+## Headless admin + SSO (no UI)
 
-Passkeys and orgs can't be provisioned headlessly, so after the first `apply`:
+`apply` does more than deploy — a `null_resource.configure` step runs on the box (over
+loopback, so no public DNS/cert needs to be live) and:
 
-1. **Pocket ID** — open `https://id.<base_domain>/setup` and register the admin passkey.
-2. **Pangolin** — open `https://pangolin.<base_domain>` and create the org/admin.
-3. **SSO (optional)** — wire Pangolin to Pocket ID:
-   - In Pocket ID → *OIDC Clients* → create a client. Callback URL:
-     `https://pangolin.<base_domain>/auth/idp/<id>/oidc/callback` (Pangolin shows the
-     exact URL when you add the provider).
-   - In Pangolin → *Server Admin → Identity Providers* → add an OIDC provider using the
-     client ID/secret and Pocket ID's issuer `https://id.<base_domain>`.
+1. **Seeds the Pangolin server admin** with `pangctl set-admin-credentials`
+   (`pangolin_admin_email` / `pangolin_admin_password`) — no setup wizard.
+2. **Wires SSO** (when `enable_sso = true`, the default) by running `../provision-sso.sh`:
+   Pocket ID's `STATIC_API_KEY` creates a hidden admin, the deterministic OIDC client
+   `pangolin` is created, and Pangolin gets an identity provider pointing at it — including
+   the two-pass redirect-URL callback. Optionally seeds groups/users from
+   `sso_identity_file` and maps group claims onto an org (`pangolin_org_id`).
 
-`tofu output` prints these URLs and the steps.
+The mechanics live in `provision-sso.sh` / `lib/sso.sh` (Pangolin drives its own `/api/v1`
+with a session cookie + CSRF; Pocket ID uses `X-API-Key`); see the repo root
+[provisioning docs](../README.md). The dry-run test (`tests/dryrun-provision-sso.sh`)
+exercises the full flow offline.
+
+### The only human step
+
+Passkeys can't be provisioned headlessly: open `https://id.<base_domain>/setup` **once** to
+enrol your admin passkey, then log into `https://pangolin.<base_domain>` (via Pocket ID if
+SSO is on). `tofu output next_steps` prints exactly this.
+
+Set `enable_sso = false` to deploy + seed the admin only and wire SSO later.
 
 ## Adding a service behind Pangolin
 

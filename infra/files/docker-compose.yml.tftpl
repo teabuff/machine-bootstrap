@@ -14,6 +14,8 @@ services:
           memory: 256m
     volumes:
       - ./config:/app/config
+    ports:
+      - "127.0.0.1:3000:3000" # bootstrap only; public ingress is 443 via Traefik
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/"]
       interval: "3s"
@@ -67,8 +69,13 @@ services:
       APP_URL: "https://${pocket_id_host}"
       TRUST_PROXY: "true"
       ENCRYPTION_KEY: "${pocket_id_encryption_key}"
+      # Declarative admin: this key conjures a hidden "Static API User" so the
+      # OIDC client + IdP can be provisioned over the API with no passkey/UI.
+      STATIC_API_KEY: "${pocket_id_static_api_key}"
       PUID: "1000"
       PGID: "1000"
+    ports:
+      - "127.0.0.1:1411:1411" # bootstrap only; public ingress is 443 via Traefik
     volumes:
       - ./pocket-id-data:/app/data
 
