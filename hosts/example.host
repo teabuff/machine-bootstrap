@@ -1,0 +1,17 @@
+# Example host manifest — desired state, applied idempotently:
+#   sudo ./apply-host.sh hosts/<name>.host
+#
+# Verbs:
+#   group   <name> <gid>                 GIDs are FIXED across hosts so that
+#   dir     <path> <owner:group> <mode>  /data dirs share ownership everywhere
+#   service <name> <enabled|started>
+#
+# Pick GIDs in a stable reserved range (e.g. 8000+) you won't collide with.
+
+group   app-dev   8001
+group   app-ops   8002
+
+dir     /data/app-dev   root:app-dev   2775
+dir     /data/app-ops   root:app-ops   2775
+
+service docker   started
