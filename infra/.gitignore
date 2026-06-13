@@ -1,0 +1,8 @@
+# Secrets and local state — never commit. example.tfvars is the safe template.
+*.tfvars
+!example.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
