@@ -8,6 +8,12 @@
 #
 # Groups must be declared before any user that references them. Re-running
 # converges membership to exactly what's listed here (full replace).
+#
+# CONVENTION: set <username> to the EMAIL LOCAL-PART (jane@... -> jane). Pangolin
+# derives the SSH Linux username from the email local-part (push mode -> p-jane),
+# so matching the Pocket ID username keeps identity aligned across Pocket ID,
+# Pangolin, and SSH. A mismatched handle (e.g. username "jdoe", email jane@...)
+# logs into the dashboard as jdoe but SSHes as p-jane — confusing; avoid it.
 
 # These group names line up with the default role mapping (admins -> Admin,
 # developers -> Developer, guests -> Guest; everyone else -> Member/Guest).
@@ -16,6 +22,7 @@ group developers "Developers"
 group guests     "Guests"
 
 # Users are optional — they self-register via passkey on first login and get the
-# role their email/groups map to. Pre-seed here to put someone in a group up front:
-#user  jdoe   "Jane Doe"     jane@example.com   admins
-#user  asmith "Alice Smith"  alice@example.com  developers
+# role their email/groups map to. Pre-seed here to put someone in a group up front
+# (username = email local-part, per the convention above):
+#user  jane   "Jane Doe"     jane@example.com   admins
+#user  alice  "Alice Smith"  alice@example.com  developers

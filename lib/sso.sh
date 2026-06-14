@@ -126,6 +126,11 @@ pid_user() {
     pid PUT "/api/users/$id" '^200$' "$payload" >/dev/null
     echo "  = pocket-id user $username" >&2
   fi
+  # Pocket ID (>=2.x) IGNORES userGroupIds on the user create/update body —
+  # group membership must be set through this dedicated endpoint (idempotent:
+  # it replaces the user's group set with exactly the listed ids).
+  pid PUT "/api/users/$id/user-groups" '^200$' \
+    "$(jq -nc --argjson g "$gids" '{userGroupIds:$g}')" >/dev/null
   echo "$id"
 }
 
@@ -199,6 +204,26 @@ pang_login() {
   grep -q 'p_session_token' "$PANG_COOKIES" \
     || { echo "pangolin login did not set a session cookie" >&2; return 1; }
   echo "  = pangolin logged in as $PANGOLIN_ADMIN_EMAIL" >&2
+}
+
+# Activate a Pangolin Enterprise Edition license headlessly (idempotent). The
+# /license/* routes exist ONLY on the ee- image and require a SERVER admin (the
+# bootstrap admin is one). Skips when a key is already valid, so re-runs are a
+# no-op. NB: SSH/private-resource features still depend on the activated tier
+# including them — if a resource later 403s, the licensed tier is too low.
+pang_license() {
+  local key=$1
+  [[ -z $key ]] && return 0
+  # Already valid? /license/keys lists keys with a boolean `valid` (single-host,
+  # single-license here, so any valid key means we're licensed).
+  if pang GET /license/keys '^200$' 2>/dev/null \
+       | jq -e '[.data[]? | select(.valid==true)] | length > 0' >/dev/null 2>&1; then
+    echo "  = pangolin license already active" >&2
+    return 0
+  fi
+  pang POST /license/activate '^20[01]$' \
+    "$(jq -nc --arg k "$key" '{licenseKey:$k}')" >/dev/null
+  echo "  + pangolin license activated" >&2
 }
 
 # Ensure the external OIDC IdP exists and echo "<idpId> <redirectUrl>".

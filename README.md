@@ -78,6 +78,21 @@ OIDC provider on a remote box, brought up and configured with **no UI clicks**. 
 The only step that still needs a human is enrolling a login **passkey** once at Pocket ID's
 `/setup` — provisioning (admin, OIDC client, IdP, org mapping) needs no passkey and no UI.
 
+### Identity-aware SSH (Enterprise Edition)
+
+`infra/` also runs Pangolin's **Enterprise Edition** image and, with
+`enable_ssh_access` (on by default), provisions identity-aware SSH. EE is **free**
+for personal use / businesses under USD 100k revenue but is **required** for SSH:
+set `pangolin_license_key` in tfvars and it is activated headlessly on apply
+(`fosrl/pangolin:ee-…`). A host-native [`newt`](https://github.com/fosrl/newt)
+runs as the auth-daemon, and a Pangolin **blueprint** declares a private SSH
+resource (`pangolin ssh <user>@<host>-ssh`, alias `<host>.internal`) plus an
+optional public browser-SSH resource (`shell.<domain>`). A user authenticates
+with their Pocket ID identity, gets a 5-minute CA-signed cert, and is
+JIT-provisioned as a Linux user (= their email local-part, prefixed `p-`) with
+per-role RBAC: a fixed-GID Unix **group** (via `apply-host.sh`), scoped **sudo**
+(e.g. `ufw`), and a home dir. See [`infra/SSH-ACCESS.md`](infra/SSH-ACCESS.md).
+
 **`newt-site/`** is an optional add-on: a Dockerized [Newt](https://github.com/fosrl/newt)
 connector for a homelab/site host that self-registers with a provisioning key (and can
 continuously apply a resource blueprint). Not needed by the hub itself.

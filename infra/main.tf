@@ -15,17 +15,29 @@ locals {
   # group, then default to Member for company (@root-domain) emails and Guest
   # for everyone else. Names must match roles that exist (Admin/Member built in,
   # the rest from pangolin_roles).
-  default_role_mapping = "contains(groups, 'admins') && 'Admin' || contains(groups, 'developers') && 'Developer' || contains(groups, 'guests') && 'Guest' || ends_with(email, '@${local.root_domain}') && 'Member' || 'Guest'"
+  # NB: each claim is guarded (`groups && contains(...)`, `email && ends_with(...)`)
+  # because Pocket ID OMITS the `groups` claim entirely for a user with no groups,
+  # and JMESPath `contains(null,...)` THROWS — which `||` does not catch, so the
+  # login 500s and the fallback never runs. The `&&` guard short-circuits on a
+  # missing claim. (A `groups || ` + backtick-array literal would also work, but
+  # backticks break here: this string is rendered into sso.conf and sourced by
+  # bash, where backticks are command substitution.)
+  default_role_mapping = "groups && contains(groups, 'admins') && 'Admin' || groups && contains(groups, 'developers') && 'Developer' || groups && contains(groups, 'guests') && 'Guest' || email && ends_with(email, '@${local.root_domain}') && 'Member' || 'Guest'"
   role_mapping         = var.idp_role_mapping != "" ? var.idp_role_mapping : local.default_role_mapping
 
   # Org membership: must return the org id (or true) to admit. Default = admit
   # everyone by returning the org-id literal (a bare 'true' string admits nobody).
   org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
 
+  # Always the Enterprise Edition image (the community tag lacks the premium
+  # code: no SSH, no /license routes). pangolin_license_key is required and is
+  # activated headlessly in configure.
+  pangolin_image = "fosrl/pangolin:ee-${var.pangolin_version}"
+
   # Render every config the box needs from one place, so the deploy resource
   # can both upload them and key its re-run trigger off their content.
   compose = templatefile("${path.module}/files/docker-compose.yml.tftpl", {
-    pangolin_version         = var.pangolin_version
+    pangolin_image           = local.pangolin_image
     gerbil_version           = var.gerbil_version
     traefik_version          = var.traefik_version
     pocket_id_version        = var.pocket_id_version
@@ -46,6 +58,7 @@ locals {
     PANGOLIN_DASHBOARD_URL="https://${local.dashboard_host}"
     PANGOLIN_ADMIN_EMAIL="${var.pangolin_admin_email}"
     PANGOLIN_ADMIN_PASSWORD="${var.pangolin_admin_password}"
+    PANGOLIN_LICENSE_KEY="${var.pangolin_license_key}"
     OIDC_CLIENT_ID="pangolin"
     IDP_NAME="pocket-id"
     SSO_STATE_FILE="${var.stack_dir}/.sso-state"
@@ -148,10 +161,12 @@ resource "null_resource" "deploy" {
     private_key = file(pathexpand(var.ssh_private_key_path))
   }
 
-  # 1. Ensure the directory tree exists before uploading into it.
+  # 1. Ensure the directory tree exists and is writable by the SSH user so the
+  #    file provisioner (scp, runs as that user) can upload into it.
   provisioner "remote-exec" {
     inline = [
       "mkdir -p ${var.stack_dir}/config/traefik ${var.stack_dir}/config/letsencrypt",
+      "chown -R ${var.ssh_user} ${var.stack_dir}",
     ]
   }
 

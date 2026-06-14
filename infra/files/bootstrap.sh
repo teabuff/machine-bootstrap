@@ -49,6 +49,17 @@ echo "==> seeding Pangolin server admin ($PANGOLIN_ADMIN_EMAIL)"
 docker exec pangolin pangctl set-admin-credentials \
   --email "$PANGOLIN_ADMIN_EMAIL" --password "$PANGOLIN_ADMIN_PASSWORD"
 
+# Register the EE license headlessly (no /admin/license UI). Only meaningful on
+# the ee- image; the key is selected into that image by main.tf when set.
+# Idempotent: skips when already valid. Reuses lib/sso.sh's session helpers.
+if [ -n "${PANGOLIN_LICENSE_KEY:-}" ]; then
+  echo "==> activating Pangolin EE license"
+  # shellcheck source=/dev/null
+  . "$stack_dir/lib/sso.sh"
+  pang_login
+  pang_license "$PANGOLIN_LICENSE_KEY"
+fi
+
 if [ "$enable_sso" = "true" ]; then
   wait_http "${POCKETID_URL%/}/.well-known/openid-configuration" pocket-id
   echo "==> wiring Pangolin <-> Pocket ID SSO"
