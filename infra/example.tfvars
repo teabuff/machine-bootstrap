@@ -21,7 +21,7 @@ letsencrypt_email   = "you@example.com"
 # --- Pin images for reproducibility (recommended over "latest") ---
 # pangolin_version  = "1.x.x"
 # gerbil_version    = "1.x.x"
-# pocket_id_version = "vX.Y.Z"
+# pocket_id_version = "v2.8.0"   # MUST be >= 2.2.0 for headless SSO (STATIC_API_KEY)
 # traefik_version   = "v3.6"
 # badger_version    = "v1.4.1"   # MUST match the pangolin release
 

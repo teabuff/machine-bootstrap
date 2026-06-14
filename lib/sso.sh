@@ -59,7 +59,9 @@ state_set() {
 _http() {
   # _http <jar|nojar> <method> <url> <accept-codes-regex> [json] [extra-header...]
   local jar=$1 method=$2 url=$3 ok=$4 body=${5:-}; shift; shift; shift; shift; [[ $# -gt 0 ]] && shift
-  local -a args=(-sS -X "$method" -o /tmp/sso_body.$$ -w '%{http_code}')
+  # -g/--globoff: Pocket ID's pagination params contain [ ] which curl would
+  # otherwise read as glob ranges ("curl: (3) bad range").
+  local -a args=(-sS -g -X "$method" -o /tmp/sso_body.$$ -w '%{http_code}')
   [[ $jar == jar ]] && args+=(-b "$PANG_COOKIES" -c "$PANG_COOKIES")
   local h; for h in "$@"; do args+=(-H "$h"); done
   if [[ -n $body ]]; then args+=(-H 'Content-Type: application/json' -d "$body"); fi

@@ -107,8 +107,13 @@ variable "badger_version" {
 
 variable "pocket_id_version" {
   type        = string
-  description = "ghcr.io/pocket-id/pocket-id image tag."
-  default     = "latest"
+  description = "ghcr.io/pocket-id/pocket-id image tag. Headless SSO REQUIRES >= 2.2.0 — STATIC_API_KEY was added in 2.2.0 (the :v1 tag is 1.16.x and silently 401s every API call). Verified end-to-end on 2.8.0."
+  default     = "v2.8.0"
+
+  validation {
+    condition     = !can(regex("^v?1[.:]", var.pocket_id_version))
+    error_message = "pocket_id_version must be >= 2.2.0 (Pocket ID 1.x lacks STATIC_API_KEY, so headless SSO can't authenticate)."
+  }
 }
 
 # ---------------------------------------------------------------------------
