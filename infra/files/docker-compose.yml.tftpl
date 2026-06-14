@@ -48,6 +48,12 @@ services:
     image: traefik:${traefik_version}
     container_name: traefik
     restart: unless-stopped
+%{ if dns_challenge ~}
+    environment:
+      # Lets Traefik solve the DNS-01 challenge for the wildcard cert by writing
+      # _acme-challenge TXT records. Scope: Zone:Read + DNS:Edit.
+      CLOUDFLARE_DNS_API_TOKEN: "${cloudflare_dns_token}"
+%{ endif ~}
     network_mode: service:gerbil
     depends_on:
       pangolin:

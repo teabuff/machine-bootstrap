@@ -25,7 +25,11 @@ echo "==> pulling images"
 docker compose pull --quiet
 
 echo "==> converging stack"
-docker compose up -d --remove-orphans
+# --force-recreate so bind-mounted config changes (config.yml, traefik configs)
+# actually take effect — compose otherwise only recreates on service-spec changes.
+# This script only runs when Terraform sees a config/script change, so it isn't
+# churning on no-op applies.
+docker compose up -d --remove-orphans --force-recreate
 
 echo "==> current state"
 docker compose ps

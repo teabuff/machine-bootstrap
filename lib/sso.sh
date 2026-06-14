@@ -224,11 +224,38 @@ pang_idp() {
   echo "$idp_id $redirect"
 }
 
+# Ensure an organization exists; create it (with auto-picked subnets) if missing.
+# Idempotent — orgs are the bootstrap an IdP user needs to belong to before they
+# can log in ("No policies matched ... must be added to an organization").
+pang_ensure_org() {
+  local org_id=$1 name=${2:-$1}
+  if pang GET /orgs '^200$' | jq -e --arg o "$org_id" '.data.orgs[]? | select(.orgId==$o)' >/dev/null 2>&1; then
+    echo "  = pangolin org $org_id" >&2
+    return 0
+  fi
+  local d sn us
+  d=$(pang GET /pick-org-defaults '^200$')
+  sn=$(echo "$d" | jq -r '.data.subnet')
+  us=$(echo "$d" | jq -r '.data.utilitySubnet')
+  pang PUT /org '^20[01]$' \
+    "$(jq -nc --arg i "$org_id" --arg n "$name" --arg s "$sn" --arg u "$us" \
+       '{orgId:$i, name:$n, subnet:$s, utilitySubnet:$u}')" >/dev/null
+  echo "  + pangolin org $org_id" >&2
+}
+
 # Map IdP claims onto a Pangolin org's roles/membership (JMESPath expressions).
+# NB: values are JMESPath — a default role/org needs quoted literals ('Member',
+# 'true'), not bare words (which are read as claim lookups -> null -> no match).
 pang_idp_org() {
-  local idp_id=$1 org_id=$2 role_map=$3 org_map=$4
-  pang PUT "/idp/$idp_id/org/$org_id" '^20[01]$' \
-    "$(jq -nc --arg r "$role_map" --arg o "$org_map" '{roleMapping:$r, orgMapping:$o}')" \
-    >/dev/null
-  echo "  = pangolin idp $idp_id -> org $org_id mapping" >&2
+  local idp_id=$1 org_id=$2 role_map=$3 org_map=$4 body
+  body=$(jq -nc --arg r "$role_map" --arg o "$org_map" '{roleMapping:$r, orgMapping:$o}')
+  # PUT creates the policy (and 400s if it already exists); POST updates it.
+  # Pick by whether a policy for this org already exists, so re-runs converge.
+  if pang GET "/idp/$idp_id/org" '^200$' | jq -e --arg o "$org_id" '.data.policies[]? | select(.orgId==$o)' >/dev/null 2>&1; then
+    pang POST "/idp/$idp_id/org/$org_id" '^200$' "$body" >/dev/null
+    echo "  = pangolin idp $idp_id -> org $org_id mapping" >&2
+  else
+    pang PUT "/idp/$idp_id/org/$org_id" '^20[01]$' "$body" >/dev/null
+    echo "  + pangolin idp $idp_id -> org $org_id mapping" >&2
+  fi
 }

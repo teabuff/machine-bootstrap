@@ -45,7 +45,11 @@ case "$method $url" in
   "POST "*"/api/oidc/clients/"*"/secret") code=201; body='{"secret":"S3CR3T-xyz"}';;
   "POST "*"/auth/login")        [[ -n $cookiejar ]] && printf 'p_session_token\tabc123\n' > "$cookiejar"; body='{"success":true}';;
   "GET "*"/api/v1/idp")         body='{"data":{"idps":[]}}';;
+  "GET "*"/api/v1/idp/"*"/org") body='{"data":{"policies":[]}}';;   # no policy yet -> PUT
   "PUT "*"/api/v1/idp/oidc")    code=201; body='{"data":{"idpId":7,"redirectUrl":"https://pang.test/auth/idp/7/oidc/callback"}}';;
+  "GET "*"/api/v1/orgs"*)       body='{"data":{"orgs":[]}}';;
+  "GET "*"/api/v1/pick-org-defaults"*) body='{"data":{"subnet":"100.90.0.0/20","utilitySubnet":"100.96.0.0/20"}}';;
+  "PUT "*"/api/v1/org")         code=201; body='{"success":true,"data":{"orgId":"org-main"}}';;
   "PUT "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
   *) code=200; body='{}';;
 esac
@@ -110,6 +114,9 @@ hasre 'PUT http://127.0.0.1:3000/api/v1/idp/oidc .*"autoProvision":true'
 # Callback wiring: Pangolin's redirect URL registered back as the client callback.
 hasre 'PUT https://id.test/api/oidc/clients/pangolin .*"callbackURLs":\["https://pang.test/auth/idp/7/oidc/callback"\]'
 
+# Org auto-created (subnets from pick-org-defaults) before the IdP policy is set.
+hasre 'GET http://127.0.0.1:3000/api/v1/pick-org-defaults'
+hasre 'PUT http://127.0.0.1:3000/api/v1/org .*"orgId":"org-main".*"subnet":"100.90.0.0/20"'
 # Org/role mapping applied with the JMESPath expression.
 hasre 'PUT http://127.0.0.1:3000/api/v1/idp/7/org/org-main .*"roleMapping":"contains\(groups'
 
@@ -138,7 +145,10 @@ case "$method $url" in
   "PUT "*"/api/oidc/clients/"*) body='{"id":"pangolin"}';;
   "POST "*"/auth/login") [[ -n $cookiejar ]] && printf 'p_session_token\tabc\n' > "$cookiejar"; body='{"success":true}';;
   "GET "*"/api/v1/idp") body='{"data":{"idps":[{"idpId":7,"name":"pocket-id"}]}}';;  # exists -> update path
+  "GET "*"/api/v1/idp/"*"/org") body='{"data":{"policies":[{"idpId":7,"orgId":"org-main"}]}}';;  # policy exists -> POST update
+  "GET "*"/api/v1/orgs"*) body='{"data":{"orgs":[{"orgId":"org-main","name":"org-main"}]}}';;  # exists -> skip create
   "POST "*"/api/v1/idp/"*"/oidc") body='{"success":true}';;
+  "POST "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
   "PUT "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
   *) body='{}';;
 esac
@@ -156,6 +166,9 @@ grep -q 'POST https://id.test/api/user-groups ' "$LOG" && fail "re-run recreated
 grep -q 'POST https://id.test/api/users ' "$LOG" && fail "re-run recreated a user"
 grep -q '/api/oidc/clients/pangolin/secret' "$LOG" && fail "re-run rotated the client secret"
 grep -q 'PUT http://127.0.0.1:3000/api/v1/idp/oidc' "$LOG" && fail "re-run recreated the IdP"
+grep -qE 'PUT http://127.0.0.1:3000/api/v1/org ' "$LOG" && fail "re-run recreated the org"
+grep -qE 'PUT http://127.0.0.1:3000/api/v1/idp/7/org/' "$LOG" && fail "re-run PUT (create) an existing IdP-org policy -> would 400"
+hasre 'POST http://127.0.0.1:3000/api/v1/idp/7/org/org-main ' # update, not create
 hasre 'POST http://127.0.0.1:3000/api/v1/idp/7/oidc '   # update, not create
 hasre 'PUT https://id.test/api/users/usr-001 '          # update existing user
 

@@ -83,14 +83,14 @@ variable "letsencrypt_email" {
 
 variable "pangolin_version" {
   type        = string
-  description = "fosrl/pangolin image tag. Pin to a release for reproducibility."
-  default     = "latest"
+  description = "fosrl/pangolin image tag. Pinned (not 'latest') for reproducibility; verified working with gerbil 1.4.2 + badger v1.4.1."
+  default     = "1.19.2"
 }
 
 variable "gerbil_version" {
   type        = string
-  description = "fosrl/gerbil image tag."
-  default     = "latest"
+  description = "fosrl/gerbil image tag. Keep in step with the pangolin release."
+  default     = "1.4.2"
 }
 
 variable "traefik_version" {
@@ -124,6 +124,18 @@ variable "stack_dir" {
   type        = string
   description = "Absolute directory on the server where the compose stack lives."
   default     = "/opt/pangolin-stack"
+}
+
+variable "manage_firewall" {
+  type        = bool
+  description = "Install/converge ufw to allow only ssh_port + 80/443/51820·udp/21820·udp (SSH-safe). Set false if a firewall is managed elsewhere. NB: Docker-published ports bypass ufw regardless."
+  default     = true
+}
+
+variable "acme_dns_challenge" {
+  type        = bool
+  description = "Use the Let's Encrypt DNS-01 challenge to issue a WILDCARD cert (*.base_domain) instead of per-host HTTP-01. Hides hostnames from CT logs and dodges rate limits, but puts the Cloudflare DNS token on the box (Traefik writes _acme-challenge TXT records). Requires DNS on Cloudflare; the token needs Zone:Read + DNS:Edit."
+  default     = false
 }
 
 # ---------------------------------------------------------------------------
@@ -161,18 +173,24 @@ variable "sso_identity_file" {
 
 variable "pangolin_org_id" {
   type        = string
-  description = "Optional Pangolin org id to map Pocket ID group claims onto (JMESPath). Empty = skip org/role mapping."
+  description = "Pangolin org slug to create (if absent) and map the IdP into, so SSO users have an org to join. Empty = derive from the first label of base_domain (e.g. 'tyo' from tyo.example.com)."
+  default     = ""
+}
+
+variable "pangolin_org_name" {
+  type        = string
+  description = "Display name for the org. Empty = same as the org id."
   default     = ""
 }
 
 variable "idp_role_mapping" {
   type        = string
-  description = "JMESPath expression mapping IdP claims to a Pangolin role (used only when pangolin_org_id is set)."
-  default     = "Member"
+  description = "JMESPath returning the role NAME to grant SSO users. Default 'Member' is a quoted LITERAL — bare Member would be read as a claim lookup (-> null -> no role)."
+  default     = "'Member'"
 }
 
 variable "idp_org_mapping" {
   type        = string
-  description = "JMESPath expression deciding org membership (used only when pangolin_org_id is set)."
-  default     = "true"
+  description = "JMESPath deciding org membership; must return true or the org id. Default 'true' is a quoted literal = add every user."
+  default     = "'true'"
 }
