@@ -11,6 +11,17 @@ locals {
   org_id      = var.pangolin_org_id != "" ? var.pangolin_org_id : replace(local.root_domain, ".", "-")
   org_name    = var.pangolin_org_name != "" ? var.pangolin_org_name : local.org_id
 
+  # Group-based role mapping (JMESPath over the IdP claims): role by Pocket ID
+  # group, then default to Member for company (@root-domain) emails and Guest
+  # for everyone else. Names must match roles that exist (Admin/Member built in,
+  # the rest from pangolin_roles).
+  default_role_mapping = "contains(groups, 'admins') && 'Admin' || contains(groups, 'developers') && 'Developer' || contains(groups, 'guests') && 'Guest' || ends_with(email, '@${local.root_domain}') && 'Member' || 'Guest'"
+  role_mapping         = var.idp_role_mapping != "" ? var.idp_role_mapping : local.default_role_mapping
+
+  # Org membership: must return the org id (or true) to admit. Default = admit
+  # everyone by returning the org-id literal (a bare 'true' string admits nobody).
+  org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
+
   # Render every config the box needs from one place, so the deploy resource
   # can both upload them and key its re-run trigger off their content.
   compose = templatefile("${path.module}/files/docker-compose.yml.tftpl", {
@@ -40,8 +51,9 @@ locals {
     SSO_STATE_FILE="${var.stack_dir}/.sso-state"
     PANGOLIN_ORG_ID="${local.org_id}"
     PANGOLIN_ORG_NAME="${local.org_name}"
-    IDP_ROLE_MAPPING="${var.idp_role_mapping}"
-    IDP_ORG_MAPPING="${var.idp_org_mapping}"
+    PANGOLIN_ROLES="${join(" ", var.pangolin_roles)}"
+    IDP_ROLE_MAPPING="${local.role_mapping}"
+    IDP_ORG_MAPPING="${local.org_mapping}"
   EOT
 
   # Optional identity manifest (groups/users seeded into Pocket ID). Empty by

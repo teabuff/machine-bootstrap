@@ -183,14 +183,20 @@ variable "pangolin_org_name" {
   default     = ""
 }
 
+variable "pangolin_roles" {
+  type        = list(string)
+  description = "Custom org roles to create (Admin + Member are built in). The role-mapping must only return names that exist. New roles start with no resource permissions — grant per-resource later."
+  default     = ["Developer", "Guest"]
+}
+
 variable "idp_role_mapping" {
   type        = string
-  description = "JMESPath returning the role NAME to grant SSO users. Default 'Member' is a quoted LITERAL — bare Member would be read as a claim lookup (-> null -> no role)."
-  default     = "'Member'"
+  description = "JMESPath returning the role NAME for an SSO user. Empty = a group-based default (admins->Admin, developers->Developer, guests->Guest; @<root-domain> emails -> Member; everyone else -> Guest). Quote literals ('Admin'); bare words are claim lookups."
+  default     = ""
 }
 
 variable "idp_org_mapping" {
   type        = string
-  description = "JMESPath deciding org membership; must return true or the org id. Default 'true' is a quoted literal = add every user."
-  default     = "'true'"
+  description = "JMESPath deciding org membership; must return the org id (or boolean true) to ADMIT the user — a bare string like 'true' is NEITHER and admits nobody. Empty = admit everyone (returns the org-id literal). For domain-gating use e.g. ends_with(email,'@example.com') && '<org-id>'."
+  default     = ""
 }

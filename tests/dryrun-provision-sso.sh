@@ -50,6 +50,8 @@ case "$method $url" in
   "GET "*"/api/v1/orgs"*)       body='{"data":{"orgs":[]}}';;
   "GET "*"/api/v1/pick-org-defaults"*) body='{"data":{"subnet":"100.90.0.0/20","utilitySubnet":"100.96.0.0/20"}}';;
   "PUT "*"/api/v1/org")         code=201; body='{"success":true,"data":{"orgId":"org-main"}}';;
+  "GET "*"/api/v1/org/"*"/roles"*) body='{"data":{"roles":[]}}';;   # no custom roles -> PUT
+  "PUT "*"/api/v1/org/"*"/role") code=201; body='{"success":true,"data":{"roleId":9}}';;
   "PUT "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
   *) code=200; body='{}';;
 esac
@@ -74,6 +76,7 @@ PANGOLIN_ADMIN_PASSWORD=hunter2hunter2
 OIDC_CLIENT_ID=pangolin
 IDP_NAME=pocket-id
 PANGOLIN_ORG_ID=org-main
+PANGOLIN_ROLES="Developer Guest"
 IDP_ROLE_MAPPING="contains(groups, 'admins') && 'Admin' || 'Member'"
 IDP_ORG_MAPPING=true
 SSO_STATE_FILE=$WORK/.sso-state
@@ -119,6 +122,9 @@ hasre 'PUT https://id.test/api/oidc/clients/pangolin .*"callbackURLs":\["https:/
 # Org auto-created (subnets from pick-org-defaults) before the IdP policy is set.
 hasre 'GET http://127.0.0.1:3000/api/v1/pick-org-defaults'
 hasre 'PUT http://127.0.0.1:3000/api/v1/org .*"orgId":"org-main".*"subnet":"100.90.0.0/20"'
+# Custom roles created (so the role mapping can reference them).
+hasre 'PUT http://127.0.0.1:3000/api/v1/org/org-main/role .*"name":"Developer"'
+hasre 'PUT http://127.0.0.1:3000/api/v1/org/org-main/role .*"name":"Guest"'
 # Org/role mapping applied with the JMESPath expression.
 hasre 'PUT http://127.0.0.1:3000/api/v1/idp/7/org/org-main .*"roleMapping":"contains\(groups'
 
@@ -149,6 +155,7 @@ case "$method $url" in
   "GET "*"/api/v1/idp") body='{"data":{"idps":[{"idpId":7,"name":"pocket-id"}]}}';;  # exists -> update path
   "GET "*"/api/v1/idp/"*"/org") body='{"data":{"policies":[{"idpId":7,"orgId":"org-main"}]}}';;  # policy exists -> POST update
   "GET "*"/api/v1/orgs"*) body='{"data":{"orgs":[{"orgId":"org-main","name":"org-main"}]}}';;  # exists -> skip create
+  "GET "*"/api/v1/org/"*"/roles"*) body='{"data":{"roles":[{"roleId":9,"name":"Developer"},{"roleId":10,"name":"Guest"}]}}';;  # exist -> skip
   "POST "*"/api/v1/idp/"*"/oidc") body='{"success":true}';;
   "POST "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
   "PUT "*"/api/v1/idp/"*"/org/"*) body='{"success":true}';;
@@ -169,6 +176,7 @@ grep -q 'POST https://id.test/api/users ' "$LOG" && fail "re-run recreated a use
 grep -q '/api/oidc/clients/pangolin/secret' "$LOG" && fail "re-run rotated the client secret"
 grep -q 'PUT http://127.0.0.1:3000/api/v1/idp/oidc' "$LOG" && fail "re-run recreated the IdP"
 grep -qE 'PUT http://127.0.0.1:3000/api/v1/org ' "$LOG" && fail "re-run recreated the org"
+grep -qE 'PUT http://127.0.0.1:3000/api/v1/org/org-main/role ' "$LOG" && fail "re-run recreated a role"
 grep -qE 'PUT http://127.0.0.1:3000/api/v1/idp/7/org/' "$LOG" && fail "re-run PUT (create) an existing IdP-org policy -> would 400"
 hasre 'POST http://127.0.0.1:3000/api/v1/idp/7/org/org-main ' # update, not create
 hasre 'POST http://127.0.0.1:3000/api/v1/idp/7/oidc '   # update, not create

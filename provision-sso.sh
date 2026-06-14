@@ -79,12 +79,16 @@ echo "==> [4/5] registering Pangolin callback URL back into Pocket ID"
   || { echo "did not obtain a redirect URL from Pangolin" >&2; exit 1; }
 pid_client "$OIDC_CLIENT_ID" "$redirect_url"
 
-echo "==> [5/5] organization + IdP policy"
+echo "==> [5/5] organization + roles + IdP policy"
 if [[ -n ${PANGOLIN_ORG_ID:-} ]]; then
   # Without an org + policy, SSO users authenticate but are rejected with
-  # "must be added to an organization". Create the org (if absent) and map the
-  # IdP into it so every Pocket ID user is auto-added with a default role.
+  # "must be added to an organization". Create the org (if absent), the custom
+  # roles the role-mapping references, and the IdP->org policy so every Pocket ID
+  # user is auto-added with the role their groups/email map to.
   pang_ensure_org "$PANGOLIN_ORG_ID" "${PANGOLIN_ORG_NAME:-$PANGOLIN_ORG_ID}"
+  for role in ${PANGOLIN_ROLES:-}; do
+    pang_ensure_role "$PANGOLIN_ORG_ID" "$role"
+  done
   pang_idp_org "$idp_id" "$PANGOLIN_ORG_ID" \
     "${IDP_ROLE_MAPPING:-\'Member\'}" "${IDP_ORG_MAPPING:-\'true\'}"
 else

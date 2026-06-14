@@ -9,8 +9,13 @@
 # Groups must be declared before any user that references them. Re-running
 # converges membership to exactly what's listed here (full replace).
 
-group admins "Administrators"
-group staff  "Staff"
+# These group names line up with the default role mapping (admins -> Admin,
+# developers -> Developer, guests -> Guest; everyone else -> Member/Guest).
+group admins     "Administrators"
+group developers "Developers"
+group guests     "Guests"
 
-user  jdoe   "Jane Doe"     jane@example.com   admins staff
-user  asmith "Alice Smith"  alice@example.com  staff
+# Users are optional — they self-register via passkey on first login and get the
+# role their email/groups map to. Pre-seed here to put someone in a group up front:
+#user  jdoe   "Jane Doe"     jane@example.com   admins
+#user  asmith "Alice Smith"  alice@example.com  developers

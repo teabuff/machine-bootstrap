@@ -255,6 +255,20 @@ pang_ensure_org() {
   echo "  + pangolin org $org_id" >&2
 }
 
+# Ensure a custom role exists in the org (Admin + Member are built in). Idempotent.
+# Match by exact name — that's also what the IdP roleMapping JMESPath returns.
+# New roles start with no resource permissions; grant them per-resource later.
+pang_ensure_role() {
+  local org_id=$1 name=$2 desc=${3:-$2}
+  if pang GET "/org/$org_id/roles" '^200$' | jq -e --arg n "$name" '.data.roles[]? | select(.name==$n)' >/dev/null 2>&1; then
+    echo "  = pangolin role $name" >&2
+    return 0
+  fi
+  pang PUT "/org/$org_id/role" '^20[01]$' \
+    "$(jq -nc --arg n "$name" --arg d "$desc" '{name:$n, description:$d}')" >/dev/null
+  echo "  + pangolin role $name" >&2
+}
+
 # Map IdP claims onto a Pangolin org's roles/membership (JMESPath expressions).
 # NB: values are JMESPath — a default role/org needs quoted literals ('Member',
 # 'true'), not bare words (which are read as claim lookups -> null -> no match).
