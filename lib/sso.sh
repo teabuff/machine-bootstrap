@@ -131,12 +131,15 @@ pid_user() {
 
 # Ensure the Pangolin OIDC client exists with a deterministic, caller-chosen id
 # and the given callback URLs. Idempotent: GET by id, then POST(create)/PUT.
+# launchURL (the dashboard URL) makes the app clickable in Pocket ID's portal;
+# set PANGOLIN_DASHBOARD_URL to fill it.
 pid_client() {
   local id=$1; shift
   local cbs; cbs=$(printf '%s\n' "$@" | jq -R . | jq -sc 'map(select(length>0))')
   local payload
-  payload=$(jq -nc --arg n "Pangolin" --argjson cb "$cbs" \
-    '{name:$n, callbackURLs:$cb, logoutCallbackURLs:[],
+  payload=$(jq -nc --arg n "Pangolin" --argjson cb "$cbs" --arg lu "${PANGOLIN_DASHBOARD_URL:-}" \
+    '{name:$n, callbackURLs:$cb, launchURL:(if $lu=="" then null else $lu end),
+      logoutCallbackURLs:[],
       isPublic:false, pkceEnabled:true, requiresReauthentication:false}')
   if pid GET "/api/oidc/clients/$id" '^200$' >/dev/null 2>&1; then
     pid PUT "/api/oidc/clients/$id" '^200$' "$payload" >/dev/null
@@ -199,7 +202,10 @@ pang_login() {
 }
 
 # Ensure the external OIDC IdP exists and echo "<idpId> <redirectUrl>".
-# Re-runs reuse the persisted redirect URL (returned only at create time).
+# The callback is "<dashboard>/auth/idp/<id>/oidc/callback"; Pangolin only
+# returns it at create time, so we DERIVE it from PANGOLIN_DASHBOARD_URL when
+# set — that way it tracks a changed dashboard host (falling back to the
+# create-time value persisted in state).
 pang_idp() {
   local name=$1 client_id=$2 client_secret=$3 auth_url=$4 token_url=$5 scopes=$6
   local idp_id redirect resp
@@ -220,6 +226,12 @@ pang_idp() {
     pang POST "/idp/$idp_id/oidc" '^200$' "$body" >/dev/null
     redirect=$(state_get "idp_redirect_${name}")
     echo "  = pangolin oidc idp $name (id $idp_id)" >&2
+  fi
+  # Derive from the current dashboard URL so a changed host is picked up; keeps
+  # the Pocket ID callback in sync without trusting a stale state file.
+  if [[ -n ${PANGOLIN_DASHBOARD_URL:-} ]]; then
+    redirect="${PANGOLIN_DASHBOARD_URL%/}/auth/idp/${idp_id}/oidc/callback"
+    state_set "idp_redirect_${name}" "$redirect"
   fi
   echo "$idp_id $redirect"
 }

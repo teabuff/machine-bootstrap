@@ -68,6 +68,7 @@ cat > "$WORK/test.sso.conf" <<EOF
 POCKETID_URL=https://id.test
 POCKETID_API_KEY=0123456789abcdef0123
 PANGOLIN_URL=http://127.0.0.1:3000
+PANGOLIN_DASHBOARD_URL=https://pang.test
 PANGOLIN_ADMIN_EMAIL=admin@test
 PANGOLIN_ADMIN_PASSWORD=hunter2hunter2
 OIDC_CLIENT_ID=pangolin
@@ -101,6 +102,7 @@ hasre 'POST https://id.test/api/users .*"username":"asmith".*"userGroupIds":\["g
 
 # OIDC client created with the deterministic, caller-chosen id.
 hasre 'POST https://id.test/api/oidc/clients .*"id":"pangolin"'
+hasre 'POST https://id.test/api/oidc/clients .*"launchURL":"https://pang.test"'   # clickable portal tile
 has   'POST https://id.test/api/oidc/clients/pangolin/secret :: '
 
 # Pangolin: login, then IdP created with the generated secret + group scope.

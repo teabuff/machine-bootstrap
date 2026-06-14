@@ -31,11 +31,11 @@ pangolin_admin_password = "change-me-strong"  # avoid " and $ ; kept in state on
 # enable_sso        = true        # wire Pangolin <-> Pocket ID with no UI (set false to deploy + admin only)
 # sso_identity_file = "hosts/myrealm.sso.identity"  # optional group/user seeding (keep private)
 #
-# An org is auto-created (default id = first label of base_domain, e.g. "tyo")
-# and the IdP is mapped into it so every SSO user can log in (default role Member).
-# Override if you want a specific org or non-default role mapping:
-# pangolin_org_id   = "tyo"
-# pangolin_org_name = "Tokyo"
+# An org is auto-created and the IdP mapped into it so every SSO user can log in
+# (default role Member). Default org id = root domain hyphenated
+# (tyo.example.com -> "example-com"). Override here if you prefer another slug:
+# pangolin_org_id   = "example-com"
+# pangolin_org_name = "example.com"
 # JMESPath — quote literals! ('Member' is a literal; bare Member = a claim lookup.)
 # idp_role_mapping  = "contains(groups, 'pangolin-admin') && 'Admin' || 'Member'"
 # idp_org_mapping   = "'true'"   # add every user; or a JMESPath returning the org id

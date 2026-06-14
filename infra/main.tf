@@ -3,10 +3,13 @@ locals {
   pocket_id_host = "${var.pocket_id_subdomain}.${var.base_domain}"
   ssh_host       = var.ssh_host != "" ? var.ssh_host : var.server_ip
 
-  # Org slug SSO users join. Defaults to the first label of base_domain
-  # (tyo.example.com -> "tyo"), giving a clean per-realm org.
-  org_id   = var.pangolin_org_id != "" ? var.pangolin_org_id : split(".", var.base_domain)[0]
-  org_name = var.pangolin_org_name != "" ? var.pangolin_org_name : local.org_id
+  # Org slug SSO users join. Defaults to the root (registrable) domain with dots
+  # hyphenated: tyo.example.com -> "example-com" (last two labels; override
+  # pangolin_org_id for multi-part TLDs like .co.uk).
+  base_labels = split(".", var.base_domain)
+  root_domain = join(".", slice(local.base_labels, length(local.base_labels) - 2, length(local.base_labels)))
+  org_id      = var.pangolin_org_id != "" ? var.pangolin_org_id : replace(local.root_domain, ".", "-")
+  org_name    = var.pangolin_org_name != "" ? var.pangolin_org_name : local.org_id
 
   # Render every config the box needs from one place, so the deploy resource
   # can both upload them and key its re-run trigger off their content.
@@ -29,6 +32,7 @@ locals {
     POCKETID_URL="http://127.0.0.1:1411"
     POCKETID_API_KEY="${random_id.pocket_id_static_api_key.hex}"
     PANGOLIN_URL="http://127.0.0.1:3000"
+    PANGOLIN_DASHBOARD_URL="https://${local.dashboard_host}"
     PANGOLIN_ADMIN_EMAIL="${var.pangolin_admin_email}"
     PANGOLIN_ADMIN_PASSWORD="${var.pangolin_admin_password}"
     OIDC_CLIENT_ID="pangolin"
