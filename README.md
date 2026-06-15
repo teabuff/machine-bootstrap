@@ -75,8 +75,35 @@ OIDC provider on a remote box, brought up and configured with **no UI clicks**. 
   bash tests/dryrun-provision-sso.sh                                     # offline test
   ```
 
-The only step that still needs a human is enrolling a login **passkey** once at Pocket ID's
-`/setup` — provisioning (admin, OIDC client, IdP, org mapping) needs no passkey and no UI.
+### Host SSH prep (one-time, manual)
+
+`infra/` connects as **root** and runs privileged steps directly (no `sudo`
+wrapping), so the box must accept key-based root SSH with your deploy key. This
+is deliberately **not** automated — set it up once on a fresh box, as its
+initial sudo user:
+
+```sh
+# 1. authorize your deploy public key for root
+sudo install -d -m700 /root/.ssh
+echo 'ssh-ed25519 AAAA…your-deploy-key' | sudo tee -a /root/.ssh/authorized_keys >/dev/null
+sudo chmod 600 /root/.ssh/authorized_keys
+
+# 2. key/cert-only SSH policy, in one authoritative drop-in
+sudo tee /etc/ssh/sshd_config.d/10-ssh-auth.conf >/dev/null <<'EOF'
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+PasswordAuthentication no
+EOF
+sudo sshd -t && sudo systemctl reload ssh
+```
+
+Then set `ssh_user = "root"` in `terraform.tfvars`. (Pangolin's own JIT SSH users
+authenticate by short-lived CA cert, so `PasswordAuthentication no` doesn't affect
+them.)
+
+Beyond that host prep, the only provisioning step that needs a human is enrolling a
+login **passkey** once at Pocket ID's `/setup` — admin, OIDC client, IdP, and org
+mapping need no passkey and no UI.
 
 ### Identity-aware SSH (Enterprise Edition)
 
