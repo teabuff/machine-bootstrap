@@ -83,8 +83,8 @@ variable "letsencrypt_email" {
 
 variable "pangolin_version" {
   type        = string
-  description = "fosrl/pangolin image tag. Pinned (not 'latest') for reproducibility; verified working with gerbil 1.4.2 + badger v1.4.1."
-  default     = "1.19.2"
+  description = "Full fosrl/pangolin image tag. Use `ee-<version>` for the Enterprise build (REQUIRED for identity-aware SSH) or `<version>` for community (web + SSO only). Pinned (not 'latest') for reproducibility; verified with ee-1.19.2 + gerbil 1.4.2 + badger v1.4.1."
+  default     = "ee-1.19.2"
 }
 
 variable "gerbil_version" {

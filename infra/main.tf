@@ -29,10 +29,11 @@ locals {
   # everyone by returning the org-id literal (a bare 'true' string admits nobody).
   org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
 
-  # Always the Enterprise Edition image (the community tag lacks the premium
-  # code: no SSH, no /license routes). pangolin_license_key is required and is
-  # activated headlessly in configure.
-  pangolin_image = "fosrl/pangolin:ee-${var.pangolin_version}"
+  # Image tag is pangolin_version verbatim. Use an `ee-` tag (e.g. ee-1.19.2) for
+  # the Enterprise build — REQUIRED for identity-aware SSH and the /license routes;
+  # the bare `<version>` community build is web + SSO only. pangolin_license_key is
+  # required and activated headlessly in configure (a no-op on the community tag).
+  pangolin_image = "fosrl/pangolin:${var.pangolin_version}"
 
   # Render every config the box needs from one place, so the deploy resource
   # can both upload them and key its re-run trigger off their content.

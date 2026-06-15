@@ -19,7 +19,7 @@ pocket_id_subdomain = "id"              # -> id.frt.example.com
 letsencrypt_email   = "you@example.com"
 
 # --- Pin images for reproducibility (recommended over "latest") ---
-# pangolin_version  = "1.x.x"
+# pangolin_version  = "ee-1.19.2"   # full tag; ee- = Enterprise (needed for SSH), bare = community/web-only
 # gerbil_version    = "1.x.x"
 # pocket_id_version = "v2.8.0"   # MUST be >= 2.2.0 for headless SSO (STATIC_API_KEY)
 # traefik_version   = "v3.6"
