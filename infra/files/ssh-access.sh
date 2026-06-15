@@ -231,14 +231,28 @@ proxy-resources:
   SSH_LICENSED=1
 }
 
+# Install the dev-port firewall helper (root-owned 0755) so a role's scoped sudo
+# can point at /usr/local/bin/dev-port instead of raw ufw — devs open/close test
+# ports without being able to disable the firewall or touch SSH/privileged ports.
+# Uploaded next to this script by Terraform; skipped if absent.
+install_dev_port() {
+  [[ -f "$STACK_DIR/dev-port" ]] || return 0
+  $SUDO install -m 755 -o root -g root "$STACK_DIR/dev-port" /usr/local/bin/dev-port
+  log "= installed /usr/local/bin/dev-port (least-privilege firewall helper)"
+}
+
 # Roles created via the API start with allowSsh=false — attaching a role to an
 # SSH resource grants WEB access but the cert-sign stays 403 until the role
 # itself permits SSH. For each granted role set the SSH RBAC: allowSsh, a JIT
 # home dir, the matching Unix group (lower-cased role name, e.g. Developer ->
 # `developer` — must already exist via apply-host.sh with a fixed GID), and a
 # scoped sudo policy. SSH_SUDO_CMDS (comma/space list of absolute command paths,
-# e.g. /usr/sbin/ufw) -> sshSudoMode=commands; empty -> no sudo. Admin is implicit
-# (full sudo) and managed out of band. Idempotent; endpoint POST /role/{id}.
+# e.g. /usr/sbin/ufw) -> sshSudoMode=commands; empty -> no sudo.
+#
+# Admin is deliberately DISABLED for SSH (see admin_ssh_disable below): being a
+# Pangolin management-admin must not imply a sudo-capable shell. SSH requires a
+# granted role (e.g. Developer); a user who is only Admin is refused. Idempotent;
+# endpoint POST /role/{id}.
 role_ssh_enable() {
   local roles_json n id group mode cmds_json
   roles_json=$(pang GET "/org/${PANGOLIN_ORG_ID}/roles" '^200$')
@@ -251,11 +265,32 @@ role_ssh_enable() {
     id=$(echo "$roles_json" | jq -r --arg n "$n" '.data.roles[]? | select(.name==$n).roleId' | head -n1)
     [[ -n $id && $id != null ]] || { log "!! role '$n' not found, can't enable SSH"; continue; }
     group=$(printf '%s' "$n" | tr 'A-Z' 'a-z')
+    # systemd-journal: read access to the journal (`journalctl`) WITHOUT sudo —
+    # the standard ops "read the logs" grant. It's a system group (always present),
+    # added as a supplementary group alongside the role's own group.
     pang POST "/role/${id}" '^200$' \
       "$(jq -nc --arg g "$group" --arg m "$mode" --argjson c "$cmds_json" \
-         '{allowSsh:true, sshCreateHomeDir:true, sshUnixGroups:[$g], sshSudoMode:$m, sshSudoCommands:$c}')" >/dev/null
-    log "= role $n: SSH enabled (group $group, sudo $mode${SSH_SUDO_CMDS:+ [$SSH_SUDO_CMDS]})"
+         '{allowSsh:true, sshCreateHomeDir:true, sshUnixGroups:[$g, "systemd-journal"], sshSudoMode:$m, sshSudoCommands:$c}')" >/dev/null
+    log "= role $n: SSH enabled (groups $group+systemd-journal, sudo $mode${SSH_SUDO_CMDS:+ [$SSH_SUDO_CMDS]})"
   done
+  admin_ssh_disable "$roles_json"
+}
+
+# Decouple management-admin from shell access. Pangolin's cert-sign gate checks
+# for the signSshKey roleAction among the user's roles (no isAdmin bypass), and
+# allowSsh:false DELETES that action — so a user whose only role is Admin is
+# refused (403 "does not have permission"). sshSudoMode:none + empty groups also
+# zeroes Admin's contribution to the per-connection sudo: Pangolin takes the MAX
+# sudo across a user's resource-granted roles, so without this an admin+developer
+# user would silently get FULL sudo via Admin. (EE licensing permits editing the
+# built-in Admin role's SSH fields; on an unlicensed org the API ignores them.)
+admin_ssh_disable() {
+  local roles_json=$1 admin_id
+  admin_id=$(echo "$roles_json" | jq -r '.data.roles[]? | select(.name=="Admin").roleId' | head -n1)
+  [[ -n $admin_id && $admin_id != null ]] || return 0
+  pang POST "/role/${admin_id}" '^200$' \
+    '{allowSsh:false, sshSudoMode:"none", sshUnixGroups:[], sshSudoCommands:[]}' >/dev/null
+  log "= role Admin: SSH disabled (no signSshKey, no sudo) — SSH requires a granted role"
 }
 
 # --- 5. Additive sshd CA drop-in (only once ca.pem is real) ----------------
@@ -292,6 +327,7 @@ main() {
   newt_service
   blueprint_apply
   if [[ $SSH_LICENSED -eq 1 ]]; then
+    install_dev_port
     role_ssh_enable
     sshd_dropin
     log ""

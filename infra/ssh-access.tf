@@ -20,6 +20,7 @@ resource "null_resource" "ssh_access" {
 
   triggers = {
     script        = filesha1("${path.module}/files/ssh-access.sh")
+    dev_port      = filesha1("${path.module}/files/dev-port")
     sso_lib       = filesha1("${path.module}/../lib/sso.sh")
     newt_version  = var.newt_version
     site_name     = local.ssh_site_name
@@ -41,6 +42,11 @@ resource "null_resource" "ssh_access" {
   provisioner "file" {
     source      = "${path.module}/files/ssh-access.sh"
     destination = "${var.stack_dir}/ssh-access.sh"
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/files/dev-port"
+    destination = "${var.stack_dir}/dev-port"
   }
 
   provisioner "remote-exec" {

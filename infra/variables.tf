@@ -191,7 +191,13 @@ variable "pangolin_roles" {
 
 variable "idp_role_mapping" {
   type        = string
-  description = "JMESPath returning the role NAME for an SSO user. Empty = a group-based default (admins->Admin, developers->Developer, guests->Guest; @<root-domain> emails -> Member; everyone else -> Guest). Quote literals ('Admin'); bare words are claim lookups. Guard claims that may be absent ('groups && contains(groups,...)') — contains() on a missing claim throws and 500s the login; avoid backtick array literals (sourced by bash)."
+  description = "Verbatim full-expression OVERRIDE for the IdP role mapping. Empty (default) = provision-sso.sh COMPILES the mapping from the identity manifest's `group <name> -> <Role>` annotations, falling back to idp_role_fallback. Set this only to bypass the manifest with a hand-written JMESPath. Quote literals ('Admin'); guard absent claims ('groups && contains(groups,...)') — contains() on a missing claim throws and 500s the login; no backtick array literals (sourced by bash)."
+  default     = ""
+}
+
+variable "idp_role_fallback" {
+  type        = string
+  description = "JMESPath for the role(s) an SSO user gets when their groups match NO `-> Role` annotation in the manifest. Empty = Member for @<root-domain> emails, else Guest. Return an array (['Member']) to match the compiled mapping's multi-role type. Guard the email claim ('email && ends_with(...)'); no backticks (sourced by bash)."
   default     = ""
 }
 

@@ -11,19 +11,19 @@ locals {
   org_id      = var.pangolin_org_id != "" ? var.pangolin_org_id : replace(local.root_domain, ".", "-")
   org_name    = var.pangolin_org_name != "" ? var.pangolin_org_name : local.org_id
 
-  # Group-based role mapping (JMESPath over the IdP claims): role by Pocket ID
-  # group, then default to Member for company (@root-domain) emails and Guest
-  # for everyone else. Names must match roles that exist (Admin/Member built in,
-  # the rest from pangolin_roles).
-  # NB: each claim is guarded (`groups && contains(...)`, `email && ends_with(...)`)
-  # because Pocket ID OMITS the `groups` claim entirely for a user with no groups,
-  # and JMESPath `contains(null,...)` THROWS — which `||` does not catch, so the
-  # login 500s and the fallback never runs. The `&&` guard short-circuits on a
-  # missing claim. (A `groups || ` + backtick-array literal would also work, but
-  # backticks break here: this string is rendered into sso.conf and sourced by
-  # bash, where backticks are command substitution.)
-  default_role_mapping = "groups && contains(groups, 'admins') && 'Admin' || groups && contains(groups, 'developers') && 'Developer' || groups && contains(groups, 'guests') && 'Guest' || email && ends_with(email, '@${local.root_domain}') && 'Member' || 'Guest'"
-  role_mapping         = var.idp_role_mapping != "" ? var.idp_role_mapping : local.default_role_mapping
+  # Role mapping is COMPILED from the identity manifest's `group ... -> Role`
+  # annotations by provision-sso.sh (one source of truth — the declarative
+  # equivalent of Pangolin's UI "mapping builder"). Terraform supplies only the
+  # FALLBACK: the role(s) a user matching no mapped group receives — Member for
+  # company (@root-domain) emails, Guest for everyone else. idp_role_mapping, if
+  # set, is a verbatim full-expression override (annotations ignored).
+  # NB: the email claim is guarded (`email && ends_with(...)`) because the claim
+  # can be absent and JMESPath ends_with(null,..)/contains(null,..) THROWS, which
+  # `||` does not catch — a 500 login, not a fallthrough. Array literals
+  # (['Member']) keep the multi-role return type the compiled mapping uses. No
+  # backticks: this string is rendered into sso.conf and sourced by bash.
+  default_role_fallback = "email && ends_with(email, '@${local.root_domain}') && ['Member'] || ['Guest']"
+  role_fallback         = var.idp_role_fallback != "" ? var.idp_role_fallback : local.default_role_fallback
 
   # Org membership: must return the org id (or true) to admit. Default = admit
   # everyone by returning the org-id literal (a bare 'true' string admits nobody).
@@ -65,7 +65,8 @@ locals {
     PANGOLIN_ORG_ID="${local.org_id}"
     PANGOLIN_ORG_NAME="${local.org_name}"
     PANGOLIN_ROLES="${join(" ", var.pangolin_roles)}"
-    IDP_ROLE_MAPPING="${local.role_mapping}"
+    IDP_ROLE_MAPPING="${var.idp_role_mapping}"
+    IDP_ROLE_FALLBACK="${local.role_fallback}"
     IDP_ORG_MAPPING="${local.org_mapping}"
   EOT
 

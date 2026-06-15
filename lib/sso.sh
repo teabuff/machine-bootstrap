@@ -93,31 +93,37 @@ pid_list_all() {
   done
 }
 
-# Ensure a group exists; echo its id. Idempotent (match by unique name).
+# Ensure a group exists with the given friendly name; echo its id. Idempotent
+# (match by unique name) and CONVERGENT — a changed friendlyName in the manifest
+# is pushed on re-run via PUT, not just set at create time.
 pid_group() {
-  local name=$1 friendly=${2:-$1} id
+  local name=$1 friendly=${2:-$1} id payload
+  payload=$(jq -nc --arg n "$name" --arg f "$friendly" '{name:$n, friendlyName:$f}')
   id=$(pid_list_all /api/user-groups | jq -r --arg n "$name" 'select(.name==$n).id' | head -n1)
   if [[ -z $id ]]; then
-    id=$(pid POST /api/user-groups '^20[01]$' \
-      "$(jq -nc --arg n "$name" --arg f "$friendly" '{name:$n, friendlyName:$f}')" \
-      | jq -r '.id')
+    id=$(pid POST /api/user-groups '^20[01]$' "$payload" | jq -r '.id')
     echo "  + pocket-id group $name" >&2
+  else
+    pid PUT "/api/user-groups/$id" '^200$' "$payload" >/dev/null
+    echo "  = pocket-id group $name" >&2
   fi
   echo "$id"
 }
 
 # Ensure a user exists with the given group membership; echo its id.
-# groupIds are passed as remaining args. Update path uses PUT (full replace).
+# Args: username display email is_admin [groupId...]. is_admin ("true"/"false")
+# sets the Pocket ID admin flag — the caller derives it from group membership
+# (Pocket ID has no native group->admin off LDAP). Update path uses PUT (full replace).
 pid_user() {
-  local username=$1 display=$2 email=$3; shift 3
+  local username=$1 display=$2 email=$3 is_admin=${4:-false}; shift 4
   local gids; gids=$(printf '%s\n' "$@" | jq -R . | jq -sc 'map(select(length>0))')
   local first last id
   first=${display%% *}; last=${display#* }; [[ $last == "$display" ]] && last=""
   local payload
   payload=$(jq -nc --arg u "$username" --arg e "$email" --arg f "$first" \
-    --arg l "$last" --arg d "$display" --argjson g "$gids" \
+    --arg l "$last" --arg d "$display" --argjson g "$gids" --argjson admin "$is_admin" \
     '{username:$u, email:$e, firstName:$f, lastName:$l, displayName:$d,
-      emailVerified:true, isAdmin:false, disabled:false, userGroupIds:$g}')
+      emailVerified:true, isAdmin:$admin, disabled:false, userGroupIds:$g}')
   id=$(pid_list_all /api/users | jq -r --arg u "$username" 'select(.username==$u).id' | head -n1)
   if [[ -z $id ]]; then
     id=$(pid POST /api/users '^20[01]$' "$payload" | jq -r '.id')

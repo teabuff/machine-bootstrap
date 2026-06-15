@@ -40,16 +40,55 @@ for v in POCKETID_URL POCKETID_API_KEY PANGOLIN_URL PANGOLIN_ADMIN_EMAIL \
 done
 
 # --- manifest verbs: accumulate declared identities, seeding Pocket ID ------
-declare -A GROUP_IDS
-group() { GROUP_IDS[$1]=$(pid_group "$1" "${2:-$1}"); }
+# Membership in this group makes a user a Pocket ID admin (emulates the
+# LDAP-only LDAP_ATTRIBUTE_ADMIN_GROUP for our API-driven setup). Declare the
+# group like any other; listing it on a user's line flips their isAdmin.
+: "${POCKET_ADMIN_GROUP:=pocket-admin}"
+declare -A GROUP_IDS GROUP_ROLE   # GROUP_ROLE: group -> Pangolin role (annotated groups only)
+declare -a ROLE_ORDER             # annotated groups, in declaration order
+# group <name> [friendlyName] [PangolinRole]
+# An optional third field maps membership of this Pocket ID group onto a Pangolin
+# org role. provision compiles those into the IdP role-mapping (build_role_mapping,
+# below) — so the group->role table lives HERE, in the manifest, not in a hand-
+# written JMESPath. Groups with no role (e.g. pocket-admin) grant no Pangolin role.
+# This is the declarative equivalent of Pangolin's UI "mapping builder": one
+# source of truth, no UI drift. (No arrow separator: the manifest is sourced by
+# bash, where '>' would be a redirection — give the role as a bare third word,
+# with the friendly name present so it can't be mistaken for the role.)
+group() {
+  local name=$1 friendly=${2:-$1} role=${3:-}
+  GROUP_IDS[$name]=$(pid_group "$name" "$friendly")
+  # `if` (not `&&`): a role-less group must still return 0, or `set -e` aborts
+  # the manifest sourcing on the trailing false test.
+  if [[ -n $role ]]; then GROUP_ROLE[$name]=$role; ROLE_ORDER+=("$name"); fi
+}
+# Compile the `group ... -> Role` annotations into a JMESPath role mapping that
+# returns the ARRAY of Pangolin roles a user's groups grant (a user in several
+# mapped groups gets all of them — Pangolin unions their resource access),
+# falling back to IDP_ROLE_FALLBACK when none match. A non-empty IDP_ROLE_MAPPING
+# overrides the whole thing verbatim (manual escape hatch). The `groups &&` guard
+# is load-bearing: contains() on an absent claim throws and 500s the login.
+build_role_mapping() {
+  [[ -n ${IDP_ROLE_MAPPING:-} ]] && { printf '%s' "$IDP_ROLE_MAPPING"; return; }
+  local fallback=${IDP_ROLE_FALLBACK:-"['Guest']"}
+  [[ ${#ROLE_ORDER[@]} -eq 0 ]] && { printf '%s' "$fallback"; return; }
+  local list="" g
+  for g in "${ROLE_ORDER[@]}"; do
+    [[ -n $list ]] && list+=", "
+    list+="groups && contains(groups, '$g') && '${GROUP_ROLE[$g]}'"
+  done
+  printf '([%s][?@]) || (%s)' "$list" "$fallback"
+}
 user() {
   local username=$1 display=$2 email=$3; shift 3
   local -a gids=() g
+  local is_admin=false
   for g in "$@"; do
+    [[ $g == "$POCKET_ADMIN_GROUP" ]] && is_admin=true
     [[ -n ${GROUP_IDS[$g]:-} ]] || { echo "user $username: unknown group '$g' (declare it first)" >&2; exit 1; }
     gids+=("${GROUP_IDS[$g]}")
   done
-  pid_user "$username" "$display" "$email" "${gids[@]}" >/dev/null
+  pid_user "$username" "$display" "$email" "$is_admin" "${gids[@]}" >/dev/null
 }
 
 echo "==> [1/5] seeding Pocket ID groups + users"
@@ -89,8 +128,10 @@ if [[ -n ${PANGOLIN_ORG_ID:-} ]]; then
   for role in ${PANGOLIN_ROLES:-}; do
     pang_ensure_role "$PANGOLIN_ORG_ID" "$role"
   done
+  role_mapping=$(build_role_mapping)
+  echo "  = idp role mapping: $role_mapping" >&2
   pang_idp_org "$idp_id" "$PANGOLIN_ORG_ID" \
-    "${IDP_ROLE_MAPPING:-\'Member\'}" "${IDP_ORG_MAPPING:-\'true\'}"
+    "$role_mapping" "${IDP_ORG_MAPPING:-\'true\'}"
 else
   echo "  - skipped (PANGOLIN_ORG_ID unset) — SSO users will have no org to join"
 fi
