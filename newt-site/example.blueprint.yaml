@@ -1,0 +1,42 @@
+# Pangolin Blueprint — declarative resources, applied by setup-pangolin.sh via
+#   pangolin apply blueprint --file <this> --api-key <id.secret> --endpoint <url> --org <org>
+# and/or reconciled continuously by newt with --blueprint-file.
+#
+# {{env.X}} is substituted from the environment at apply time, so one blueprint
+# serves every region. Keep real domains OUT of git — they arrive via env.
+#
+# Exposes two things through the tunnel, both behind Pocket ID SSO:
+#   - the Pocket ID dashboard itself (so admins can manage passkeys)
+#   - a per-host code-server, reached over the docker0 gateway (host.docker.internal),
+#     matching setup-code-server.sh's bind pattern.
+
+sites:
+  local:
+    name: "{{env.SITE_NAME}}"
+    docker-socket-enabled: false
+
+public-resources:
+  pocket-id:
+    name: Pocket ID
+    protocol: http
+    full-domain: "{{env.POCKETID_DOMAIN}}"
+    # The IdP brokers its own login, so don't double-gate it with SSO.
+    auth:
+      sso-enabled: false
+    targets:
+      - site: local
+        hostname: pocket-id
+        port: 1411
+        method: http
+
+  code-server:
+    name: code-server
+    protocol: http
+    full-domain: "code.{{env.BASE_DOMAIN}}"
+    auth:
+      sso-enabled: true
+    targets:
+      - site: local
+        hostname: host.docker.internal   # docker0 gateway → host-bound service
+        port: 8083
+        method: http

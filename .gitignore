@@ -1,3 +1,17 @@
 # Local agent / editor workspace and private design notes — never commit
 .claude/
 docs/superpowers/
+
+# Private SSO realm config, declared identities, per-host manifests, and the
+# read-once secret/redirect state. Only the *.example.* templates are tracked.
+hosts/*.sso.conf
+hosts/*.sso.identity
+hosts/*.host
+!hosts/example.sso.conf
+!hosts/example.sso.identity
+!hosts/example.host
+.sso-state
+
+# Newt site connector — local secrets/credentials/state
+newt-site/.env
+newt-site/newt-data/

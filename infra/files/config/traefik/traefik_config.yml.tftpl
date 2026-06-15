@@ -1,7 +1,8 @@
 # Rendered from infra/files/config/traefik/traefik_config.yml.tftpl.
-# Per-resource certificates are issued automatically via the HTTP-01 challenge;
-# the wildcard DNS record makes every subdomain resolve to this host, so adding
-# a Pangolin resource needs no further DNS work.
+# Certs come from Let's Encrypt: per-host HTTP-01 by default, or a wildcard via
+# DNS-01 (Cloudflare) when acme_dns_challenge = true. Either way the wildcard DNS
+# record routes every subdomain here, so adding a Pangolin resource needs no
+# further DNS work.
 api:
   insecure: true
   dashboard: true
@@ -26,8 +27,13 @@ log:
 certificatesResolvers:
   letsencrypt:
     acme:
+%{ if dns_challenge ~}
+      dnsChallenge:
+        provider: cloudflare
+%{ else ~}
       httpChallenge:
         entryPoint: web
+%{ endif ~}
       email: '${letsencrypt_email}'
       storage: /letsencrypt/acme.json
       caServer: https://acme-v02.api.letsencrypt.org/directory

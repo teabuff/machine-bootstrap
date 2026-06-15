@@ -12,6 +12,10 @@ app:
 domains:
     domain1:
         base_domain: "${base_domain}"
+%{ if dns_challenge ~}
+        prefer_wildcard_cert: true
+        cert_resolver: letsencrypt
+%{ endif ~}
 
 server:
     secret: "${pangolin_secret}"

@@ -3,7 +3,7 @@
 name: pangolin
 services:
   pangolin:
-    image: fosrl/pangolin:${pangolin_version}
+    image: ${pangolin_image}
     container_name: pangolin
     restart: unless-stopped
     deploy:
@@ -14,6 +14,8 @@ services:
           memory: 256m
     volumes:
       - ./config:/app/config
+    ports:
+      - "127.0.0.1:3000:3000" # bootstrap only; public ingress is 443 via Traefik
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/"]
       interval: "3s"
@@ -46,6 +48,12 @@ services:
     image: traefik:${traefik_version}
     container_name: traefik
     restart: unless-stopped
+%{ if dns_challenge ~}
+    environment:
+      # Lets Traefik solve the DNS-01 challenge for the wildcard cert by writing
+      # _acme-challenge TXT records. Scope: Zone:Read + DNS:Edit.
+      CLOUDFLARE_DNS_API_TOKEN: "${cloudflare_dns_token}"
+%{ endif ~}
     network_mode: service:gerbil
     depends_on:
       pangolin:
@@ -67,8 +75,13 @@ services:
       APP_URL: "https://${pocket_id_host}"
       TRUST_PROXY: "true"
       ENCRYPTION_KEY: "${pocket_id_encryption_key}"
+      # Declarative admin: this key conjures a hidden "Static API User" so the
+      # OIDC client + IdP can be provisioned over the API with no passkey/UI.
+      STATIC_API_KEY: "${pocket_id_static_api_key}"
       PUID: "1000"
       PGID: "1000"
+    ports:
+      - "127.0.0.1:1411:1411" # bootstrap only; public ingress is 443 via Traefik
     volumes:
       - ./pocket-id-data:/app/data
 

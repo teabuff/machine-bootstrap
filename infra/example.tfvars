@@ -19,8 +19,29 @@ pocket_id_subdomain = "id"              # -> id.frt.example.com
 letsencrypt_email   = "you@example.com"
 
 # --- Pin images for reproducibility (recommended over "latest") ---
-# pangolin_version  = "1.x.x"
+# pangolin_version  = "ee-1.19.2"   # full tag; ee- = Enterprise (needed for SSH), bare = community/web-only
 # gerbil_version    = "1.x.x"
-# pocket_id_version = "vX.Y.Z"
+# pocket_id_version = "v2.8.0"   # MUST be >= 2.2.0 for headless SSO (STATIC_API_KEY)
 # traefik_version   = "v3.6"
 # badger_version    = "v1.4.1"   # MUST match the pangolin release
+
+# --- Pangolin EE license ---
+# REQUIRED when pangolin_version is an ee- tag (the default — needed for
+# identity-aware SSH). Free at https://app.pangolin.net -> Licenses. Leave empty
+# ("") for a community (non-ee-) tag (web + SSO only, no SSH).
+pangolin_license_key = "FILL_ME"
+
+# --- Headless admin + SSO (provisioned over loopback after deploy) ---
+pangolin_admin_email    = "admin@example.com" # lower-case; seeded via pangctl
+pangolin_admin_password = "change-me-strong"  # avoid " and $ ; kept in state only
+# enable_sso        = true        # wire Pangolin <-> Pocket ID with no UI (set false to deploy + admin only)
+# sso_identity_file = "hosts/myrealm.sso.identity"  # optional group/user seeding (keep private)
+#
+# An org is auto-created and the IdP mapped into it so every SSO user can log in
+# (default role Member). Default org id = root domain hyphenated
+# (tyo.example.com -> "example-com"). Override here if you prefer another slug:
+# pangolin_org_id   = "example-com"
+# pangolin_org_name = "example.com"
+# JMESPath — quote literals! ('Member' is a literal; bare Member = a claim lookup.)
+# idp_role_mapping  = "contains(groups, 'pangolin-admin') && 'Admin' || 'Member'"
+# idp_org_mapping   = "'true'"   # add every user; or a JMESPath returning the org id

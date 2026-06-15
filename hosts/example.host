@@ -2,9 +2,10 @@
 #   sudo ./apply-host.sh hosts/<name>.host
 #
 # Verbs:
-#   group   <name> <gid>                 GIDs are FIXED across hosts so that
-#   dir     <path> <owner:group> <mode>  /data dirs share ownership everywhere
-#   service <name> <enabled|started>
+#   group        <name> <gid>                 GIDs are FIXED across hosts so that
+#   dir          <path> <owner:group> <mode>  /data dirs share ownership everywhere
+#   service      <name> <enabled|started>
+#   polkit-units <group> <unit>...            scoped systemctl control, no sudo
 #
 # Pick GIDs in a stable reserved range (e.g. 8000+) you won't collide with.
 
@@ -15,3 +16,9 @@ dir     /data/app-dev   root:app-dev   2775
 dir     /data/app-ops   root:app-ops   2775
 
 service docker   started
+
+# Ops-friendly partial privilege: let app-ops start/stop/restart these units via
+# `systemctl` with NO sudo (polkit authorizes by group + unit). Members get the
+# group through their Pangolin role's sshUnixGroups. List only the units they
+# should control — least privilege.
+polkit-units app-ops   myapp.service   myapp-worker.service
