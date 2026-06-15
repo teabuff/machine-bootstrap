@@ -25,6 +25,12 @@ letsencrypt_email   = "you@example.com"
 # traefik_version   = "v3.6"
 # badger_version    = "v1.4.1"   # MUST match the pangolin release
 
+# --- Pangolin EE license ---
+# REQUIRED when pangolin_version is an ee- tag (the default — needed for
+# identity-aware SSH). Free at https://app.pangolin.net -> Licenses. Leave empty
+# ("") for a community (non-ee-) tag (web + SSO only, no SSH).
+pangolin_license_key = "FILL_ME"
+
 # --- Headless admin + SSO (provisioned over loopback after deploy) ---
 pangolin_admin_email    = "admin@example.com" # lower-case; seeded via pangctl
 pangolin_admin_password = "change-me-strong"  # avoid " and $ ; kept in state only

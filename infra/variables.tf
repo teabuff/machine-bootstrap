@@ -218,13 +218,12 @@ variable "idp_org_mapping" {
 
 variable "pangolin_license_key" {
   type        = string
-  description = "REQUIRED. Pangolin Enterprise Edition license key (free for personal use / <USD 100k rev). The stack runs the ee- image and activates this key headlessly on apply. Kept in state, never committed."
+  description = "Pangolin Enterprise Edition license key — REQUIRED when pangolin_version is an `ee-` tag (the Enterprise build, needed for identity-aware SSH); leave empty for a community tag. Free for personal use / <USD 100k rev. Activated headlessly on apply (a no-op when empty); kept in state, never committed."
   sensitive   = true
-
-  validation {
-    condition     = var.pangolin_license_key != "" && var.pangolin_license_key != "FILL_ME"
-    error_message = "Set pangolin_license_key in terraform.tfvars to your real Pangolin EE license key (free one at https://app.pangolin.net -> Licenses)."
-  }
+  default     = ""
+  # The conditional "ee- requires a key" rule is enforced by the
+  # terraform_data.license_check precondition (a variable validation can't
+  # reference pangolin_version on Terraform/OpenTofu < 1.9).
 }
 
 # ---------------------------------------------------------------------------

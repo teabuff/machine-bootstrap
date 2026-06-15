@@ -94,6 +94,18 @@ locals {
   })
 }
 
+# --- Input validation: an ee- (Enterprise) image needs a license key; a
+# community image must not require one. Done as a precondition (not a variable
+# validation) so it can reference pangolin_version on Terraform/OpenTofu >= 1.6.
+resource "terraform_data" "license_check" {
+  lifecycle {
+    precondition {
+      condition     = !startswith(var.pangolin_version, "ee-") || (var.pangolin_license_key != "" && var.pangolin_license_key != "FILL_ME")
+      error_message = "pangolin_version is an Enterprise (ee-) tag, so pangolin_license_key is required (free at https://app.pangolin.net -> Licenses). Use a community tag (e.g. 1.19.2) to run license-free — but identity-aware SSH won't be available."
+    }
+  }
+}
+
 # --- Generated secrets (stored in local state; never prompted, never in git) ---
 
 resource "random_id" "pangolin_secret" {
