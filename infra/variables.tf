@@ -22,7 +22,7 @@ variable "ssh_host" {
 
 variable "ssh_user" {
   type        = string
-  description = "SSH user with sudo/root on the server."
+  description = "SSH user the deploy connects as — must be root (privileged steps run directly, no sudo wrapping). The box must accept key-based root SSH with your deploy key in root's authorized_keys (configure that out of band)."
   default     = "root"
 }
 
