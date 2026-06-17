@@ -12,6 +12,12 @@ output "server_ip" {
   value = var.server_ip
 }
 
+output "pangolin_api_key" {
+  description = "Root Pangolin Integration API key (Bearer token) for the Phase-2 provider."
+  value       = data.external.pangolin_api_key.result.api_key
+  sensitive   = true
+}
+
 output "next_steps" {
   description = "What apply already did, and the only step that needs a human."
   value       = <<-EOT
