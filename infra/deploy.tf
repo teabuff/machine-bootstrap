@@ -70,7 +70,6 @@ resource "null_resource" "deploy" {
 
   depends_on = [
     null_resource.preflight,
-    cloudflare_dns_record.apex,
-    cloudflare_dns_record.wildcard,
+    cloudflare_dns_record.this,
   ]
 }
