@@ -253,9 +253,23 @@ pang_license() {
     echo "  = pangolin license already active" >&2
     return 0
   fi
-  pang POST /license/activate '^20[01]$' \
-    "$(jq -nc --arg k "$key" '{licenseKey:$k}')" >/dev/null
-  echo "  + pangolin license activated" >&2
+  # Activation binds the key to an instance. After a DB reset the license server
+  # reports the key as already activated on the (now-gone) prior instance, 500-ing
+  # this call. That must NOT brick provisioning — the stack runs unlicensed (web +
+  # SSO work; only EE features like identity-aware SSH 403). Tolerate that one case
+  # loudly; fail on anything else.
+  local resp
+  if resp=$(pang POST /license/activate '^20[01]$' \
+              "$(jq -nc --arg k "$key" '{licenseKey:$k}')" 2>&1); then
+    echo "  + pangolin license activated" >&2
+  elif printf '%s' "$resp" | grep -qiE 'already been activated|already activated'; then
+    echo "  ! license already activated on a different instance — running UNLICENSED." >&2
+    echo "    EE features (identity-aware SSH) are gated until you release the key at" >&2
+    echo "    https://app.pangolin.net (Licenses) and re-apply. SSO/web are unaffected." >&2
+  else
+    echo "  license activation failed: $resp" >&2
+    return 1
+  fi
 }
 
 # Ensure the external OIDC IdP exists and echo "<idpId> <redirectUrl>".

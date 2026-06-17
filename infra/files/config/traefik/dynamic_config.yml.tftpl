@@ -42,6 +42,21 @@ http:
       tls:
         certResolver: letsencrypt
 
+    # Integration API router (Bearer-auth /v1 on pangolin:3003 — used by the
+    # declarative config/ plane's `pangolin` Terraform provider). Explicit high
+    # priority so it wins over next-router's `!PathPrefix(/api/v1)` catch-all,
+    # which would otherwise also match /v1 and send it to the Next.js UI (404).
+    integration-router:
+      rule: "Host(`${dashboard_host}`) && PathPrefix(`/v1`)"
+      priority: 100
+      service: integration-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - badger
+      tls:
+        certResolver: letsencrypt
+
     # Pocket ID (its own auth — no badger middleware in front).
     pocket-id-redirect:
       rule: "Host(`${pocket_id_host}`)"
@@ -69,6 +84,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://pangolin:3000" # API/WebSocket server
+
+    integration-service:
+      loadBalancer:
+        servers:
+          - url: "http://pangolin:3003" # Integration API (Bearer, /v1)
 
     pocket-id-service:
       loadBalancer:
