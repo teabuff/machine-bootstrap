@@ -30,3 +30,7 @@ flags:
     disable_signup_without_invite: true
     disable_user_create_org: false
     allow_raw_resources: true
+    # Start the Integration API (Bearer-auth, /v1 on port 3003). Required for the
+    # declarative config/ plane (the `pangolin` Terraform provider). Routed
+    # publicly by Traefik (dynamic_config.yml) and gated by the Bearer API key.
+    enable_integration_api: true

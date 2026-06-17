@@ -13,7 +13,10 @@ resource "pangolin_idp" "pocket_id" {
   name_path       = "name"
   scopes          = "openid profile email groups"
   auto_provision  = true
-  variant         = "oidc"
+  # NB: do NOT set `variant` — the stackops provider's OIDC create endpoint does
+  # not echo it back, so an explicit value triggers "inconsistent result after
+  # apply". Omitting it lets the (Optional+Computed) default stand. The IdP is
+  # created via the /idp/oidc endpoint, so it is OIDC regardless.
 }
 
 # Bind the IdP to the org with the role/org mapping so SSO users land in the org
