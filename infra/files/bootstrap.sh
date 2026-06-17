@@ -51,11 +51,11 @@ docker exec pangolin pangctl set-admin-credentials \
 
 # Register the EE license headlessly (no /admin/license UI). Only meaningful on
 # the ee- image; the key is selected into that image by main.tf when set.
-# Idempotent: skips when already valid. Reuses lib/sso.sh's session helpers.
+# Idempotent: skips when already valid. Reuses lib/pang-bootstrap.sh's session helpers.
 if [ -n "${PANGOLIN_LICENSE_KEY:-}" ]; then
   echo "==> activating Pangolin EE license"
   # shellcheck source=/dev/null
-  . "$stack_dir/lib/sso.sh"
+  . "$stack_dir/lib/pang-bootstrap.sh"
   pang_login
   pang_license "$PANGOLIN_LICENSE_KEY"
 fi

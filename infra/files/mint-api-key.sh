@@ -19,8 +19,8 @@ fi
 [[ -r $sso_conf ]] || { echo "cannot read sso.conf: $sso_conf" >&2; exit 1; }
 set -a; # shellcheck source=/dev/null
 source "$sso_conf"; set +a
-# shellcheck source=lib/sso.sh
-source "$stack_dir/lib/sso.sh" 2>/dev/null || source "$(dirname "$0")/../../lib/sso.sh"
+# shellcheck source=lib/pang-bootstrap.sh
+source "$stack_dir/lib/pang-bootstrap.sh" 2>/dev/null || source "$(dirname "$0")/../../lib/pang-bootstrap.sh"
 
 action_ids=$(cat "$actions_file")
 

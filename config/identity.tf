@@ -1,4 +1,4 @@
-# Declarative Pocket ID identities (replaces lib/sso.sh's pid_group/pid_user).
+# Declarative Pocket ID identities (replaces the deleted bash pid_group/pid_user helpers).
 resource "pocketid_group" "this" {
   for_each      = { for g in var.groups : g.name => g }
   name          = each.value.name

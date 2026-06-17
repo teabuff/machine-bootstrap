@@ -238,8 +238,8 @@ resource "null_resource" "configure" {
     sso_conf     = sha1(local.sso_conf)
     sso_identity = sha1(local.sso_identity)
     bootstrap    = filesha1("${path.module}/files/bootstrap.sh")
-    provision    = filesha1("${path.module}/../provision-sso.sh")
-    sso_lib      = filesha1("${path.module}/../lib/sso.sh")
+    pang_bootstrap = filesha1("${path.module}/../lib/pang-bootstrap.sh")
+    sso_lib      = filesha1("${path.module}/../lib/pang-bootstrap.sh")
     enable_sso   = var.enable_sso
   }
 
@@ -251,7 +251,7 @@ resource "null_resource" "configure" {
     private_key = file(pathexpand(var.ssh_private_key_path))
   }
 
-  # The SSO library lives under lib/ next to provision-sso.sh on the box.
+  # The bootstrap library lives under lib/ on the box.
   provisioner "remote-exec" {
     inline = ["mkdir -p ${var.stack_dir}/lib"]
   }
@@ -261,12 +261,8 @@ resource "null_resource" "configure" {
     destination = "${var.stack_dir}/bootstrap.sh"
   }
   provisioner "file" {
-    source      = "${path.module}/../provision-sso.sh"
-    destination = "${var.stack_dir}/provision-sso.sh"
-  }
-  provisioner "file" {
-    source      = "${path.module}/../lib/sso.sh"
-    destination = "${var.stack_dir}/lib/sso.sh"
+    source      = "${path.module}/../lib/pang-bootstrap.sh"
+    destination = "${var.stack_dir}/lib/pang-bootstrap.sh"
   }
   provisioner "file" {
     content     = local.sso_conf # holds admin password + api key
@@ -280,7 +276,7 @@ resource "null_resource" "configure" {
   provisioner "remote-exec" {
     inline = [
       "chmod 600 ${var.stack_dir}/sso.conf",
-      "chmod +x ${var.stack_dir}/bootstrap.sh ${var.stack_dir}/provision-sso.sh",
+      "chmod +x ${var.stack_dir}/bootstrap.sh",
       "${var.stack_dir}/bootstrap.sh ${var.stack_dir} ${var.enable_sso}",
     ]
   }
@@ -291,7 +287,7 @@ resource "null_resource" "configure" {
 # --- Mint a root Integration API key headlessly (for the Phase-2 provider) ---
 # Uploads the actions list + mint script and runs it on the box (idempotent;
 # persists the token to $stack_dir/.integration-api-key). Depends on configure
-# so the server admin + lib/sso.sh are already in place.
+# so the server admin + lib/pang-bootstrap.sh are already in place.
 resource "null_resource" "mint_api_key" {
   triggers = {
     mint_script = filesha1("${path.module}/files/mint-api-key.sh")

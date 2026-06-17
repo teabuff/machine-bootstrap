@@ -54,10 +54,10 @@ SUDO=""
 
 # Pangolin creds/org/endpoint come from the stack's sso.conf (already on the
 # box from the configure step); the HTTP plumbing (pang/pang_login) is reused
-# from lib/sso.sh rather than reimplemented.
+# from lib/pang-bootstrap.sh rather than reimplemented.
 set -a; . "$STACK_DIR/sso.conf"; set +a
 # shellcheck source=/dev/null
-. "$STACK_DIR/lib/sso.sh"
+. "$STACK_DIR/lib/pang-bootstrap.sh"
 
 log() { printf '%s\n' "$*" >&2; }
 

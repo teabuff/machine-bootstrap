@@ -21,7 +21,7 @@ resource "null_resource" "ssh_access" {
   triggers = {
     script        = filesha1("${path.module}/files/ssh-access.sh")
     dev_port      = filesha1("${path.module}/files/dev-port")
-    sso_lib       = filesha1("${path.module}/../lib/sso.sh")
+    sso_lib       = filesha1("${path.module}/../lib/pang-bootstrap.sh")
     newt_version  = var.newt_version
     site_name     = local.ssh_site_name
     roles         = join(",", var.ssh_access_roles)
@@ -56,7 +56,7 @@ resource "null_resource" "ssh_access" {
     ]
   }
 
-  # Needs the stack deployed and SSO/admin configured (sso.conf + lib/sso.sh on
+  # Needs the stack deployed and SSO/admin configured (sso.conf + lib/pang-bootstrap.sh on
   # the box, org + roles created) before it can drive the Pangolin API.
   depends_on = [null_resource.configure]
 }
