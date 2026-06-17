@@ -1,8 +1,8 @@
-# Bootstrap (deploy + mint key) for one env, consuming the public infra/ as a
+# Bootstrap (deploy + mint key) for one env, consuming the public host/ as a
 # pinned git module. Per-env values below; secrets come from TF_VAR_* env vars
 # (see ../../.envrc.example). SSO + SSH are off — the declarative config/ owns SSO.
 module "bootstrap" {
-  source = "git::https://github.com/teabuff/machine-bootstrap.git//infra?ref=REF"
+  source = "git::https://github.com/teabuff/machine-bootstrap.git//host?ref=REF"
 
   server_ip            = var.server_ip
   base_domain          = var.base_domain

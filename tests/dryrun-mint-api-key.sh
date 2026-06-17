@@ -48,7 +48,7 @@ EOF
 
 # Run the script; it should print {"api_key":"key-123.secret-xyz"} on stdout.
 TOKEN_JSON=$(STACK_DIR="$WORK" ADMIN_CONF="$WORK/admin.conf" \
-  bash "$REPO/infra/files/mint-api-key.sh" "$REPO/infra/files/pangolin-actions.json")
+  bash "$REPO/host/files/mint-api-key.sh" "$REPO/host/files/pangolin-actions.json")
 
 fail() { echo "FAIL: $1" >&2; echo "--- requests ---" >&2; cat "$LOG" >&2; exit 1; }
 
@@ -60,7 +60,7 @@ grep -q "POST .*/api/v1/api-key/key-123/actions"   "$LOG" || fail "no grant-acti
 # Idempotency: a second run with the token already persisted must NOT create again.
 : > "$LOG"
 TOKEN_JSON2=$(STACK_DIR="$WORK" ADMIN_CONF="$WORK/admin.conf" \
-  bash "$REPO/infra/files/mint-api-key.sh" "$REPO/infra/files/pangolin-actions.json")
+  bash "$REPO/host/files/mint-api-key.sh" "$REPO/host/files/pangolin-actions.json")
 echo "$TOKEN_JSON2" | jq -e '.api_key == "key-123.secret-xyz"' >/dev/null \
   || fail "second run did not return the persisted token"
 grep -q "PUT .*/api/v1/api-key " "$LOG" && fail "second run re-created the key (not idempotent)"

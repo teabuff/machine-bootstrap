@@ -1,4 +1,4 @@
-# infra — Pangolin + Pocket ID on a remote server
+# host — Pangolin + Pocket ID on a remote server
 
 OpenTofu/Terraform that stands up [Pangolin](https://docs.pangolin.net) (self-hosted
 tunneled reverse proxy) and [Pocket ID](https://pocket-id.org) (OIDC / passkey provider)
@@ -35,7 +35,7 @@ not used.
 ## Usage
 
 ```sh
-cd infra
+cd host
 cp example.tfvars terraform.tfvars   # then edit terraform.tfvars
 tofu init
 tofu apply -var-file=terraform.tfvars
@@ -58,7 +58,7 @@ loopback, so no public DNS/cert needs to be live) and:
 2. **Activates the EE license** headlessly (when `pangolin_license_key` is set).
 
 SSO wiring (Pocket ID OIDC client, Pangolin identity provider, org + role mapping) is owned
-declaratively by the `config/` Terraform plane — run it after `infra/` is up.
+declaratively by the `config/` Terraform plane — run it after `host/` is up.
 
 ### The only human step
 
@@ -91,7 +91,7 @@ baseline and re-vendor it:
 sudo ./installer --crowdsec           # prompts for domain/email/etc; --crowdsec opts in
 
 # It writes ./config/{config.yml,docker-compose.yml,traefik/*} (+ crowdsec/ if enabled).
-# Diff those against infra/files/, copy in the new bits, and re-introduce the ${...} vars:
+# Diff those against host/files/, copy in the new bits, and re-introduce the ${...} vars:
 #   example.com           -> ${base_domain}
 #   pangolin.example.com  -> ${dashboard_host}
 #   the generated secret  -> ${pangolin_secret}
@@ -106,7 +106,7 @@ running it once interactively and vendoring the result.
 ## Layout
 
 ```
-infra/
+host/
   versions.tf      providers + version pins (tofu/terraform compatible)
   variables.tf     all inputs
   main.tf          secrets, Cloudflare records, SSH deploy

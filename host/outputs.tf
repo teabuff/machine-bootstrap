@@ -49,7 +49,7 @@ output "next_steps" {
     Provisioned with no UI by `null_resource.configure` (over loopback on the box):
       - Pangolin server admin (${var.pangolin_admin_email}) seeded via pangctl.
       - EE license activated (if pangolin_license_key is set).
-    SSO wiring is owned declaratively by the config/ Terraform plane.
+    SSO wiring is owned declaratively by the idp/ (Pocket ID) and access/ (Pangolin) Terraform planes.
 
     Only human step (passkeys can't be provisioned headlessly):
       - Open https://${local.pocket_id_host}/setup once and enrol your admin passkey,

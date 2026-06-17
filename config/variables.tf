@@ -33,7 +33,7 @@ variable "idp_org_mapping" {
   default     = ""
 }
 
-# --- Where to read the bootstrap (infra/) state from -------------------------
+# --- Where to read the bootstrap (host/) state from --------------------------
 # Default reads the sibling local state (standalone use). For multi-env, the
 # per-env config/ root passes backend = "s3" + the R2 config of its bootstrap key.
 variable "bootstrap_state_backend" {
@@ -46,7 +46,7 @@ variable "bootstrap_state_config" {
   type        = any
   description = "terraform_remote_state config for the bootstrap state. Default reads the sibling local state (standalone). For R2, pass the s3 config object {bucket, key, region, profile, endpoints = {s3=...}, skip_*, use_path_style, ...} along with bootstrap_state_backend = \"s3\"."
   default = {
-    path = "../infra/terraform.tfstate"
+    path = "../host/terraform.tfstate"
   }
 }
 

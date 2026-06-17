@@ -1,7 +1,7 @@
 # envs/example — per-environment template (copy into your PRIVATE envs repo)
 
 A template for running one environment as two thin roots that consume the public
-`machine-bootstrap` `infra/` + `config/` as **pinned git modules**, with per-env
+`machine-bootstrap` `host/` + `config/` as **pinned git modules**, with per-env
 state in **Cloudflare R2**. Copy this directory into a private repo (e.g.
 `machine-bootstrap-envs`) as `production/<realm>/<env>/` and fill in real values —
 **real domains, IPs, and the R2 account id stay in the private repo, never here.**
