@@ -3,31 +3,13 @@ locals {
   pocket_id_host = "${var.pocket_id_subdomain}.${var.base_domain}"
   ssh_host       = var.ssh_host != "" ? var.ssh_host : var.server_ip
 
-  # Org slug SSO users join. Defaults to the root (registrable) domain with dots
-  # hyphenated: tyo.example.com -> "example-com" (last two labels; override
-  # pangolin_org_id for multi-part TLDs like .co.uk).
+  # Org slug consumed by the org_id output (used by config/ to create and bind the
+  # IdP into). Defaults to the root (registrable) domain with dots hyphenated:
+  # tyo.example.com -> "example-com" (last two labels; override pangolin_org_id
+  # for multi-part TLDs like .co.uk).
   base_labels = split(".", var.base_domain)
   root_domain = join(".", slice(local.base_labels, length(local.base_labels) - 2, length(local.base_labels)))
   org_id      = var.pangolin_org_id != "" ? var.pangolin_org_id : replace(local.root_domain, ".", "-")
-  org_name    = var.pangolin_org_name != "" ? var.pangolin_org_name : local.org_id
-
-  # Role mapping is COMPILED from the identity manifest's `group ... -> Role`
-  # annotations by provision-sso.sh (one source of truth — the declarative
-  # equivalent of Pangolin's UI "mapping builder"). Terraform supplies only the
-  # FALLBACK: the role(s) a user matching no mapped group receives — Member for
-  # company (@root-domain) emails, Guest for everyone else. idp_role_mapping, if
-  # set, is a verbatim full-expression override (annotations ignored).
-  # NB: the email claim is guarded (`email && ends_with(...)`) because the claim
-  # can be absent and JMESPath ends_with(null,..)/contains(null,..) THROWS, which
-  # `||` does not catch — a 500 login, not a fallthrough. Array literals
-  # (['Member']) keep the multi-role return type the compiled mapping uses. No
-  # backticks: this string is rendered into sso.conf and sourced by bash.
-  default_role_fallback = "email && ends_with(email, '@${local.root_domain}') && ['Member'] || ['Guest']"
-  role_fallback         = var.idp_role_fallback != "" ? var.idp_role_fallback : local.default_role_fallback
-
-  # Org membership: must return the org id (or true) to admit. Default = admit
-  # everyone by returning the org-id literal (a bare 'true' string admits nobody).
-  org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
 
   # Image tag is pangolin_version verbatim. Use an `ee-` tag (e.g. ee-1.19.2) for
   # the Enterprise build — REQUIRED for identity-aware SSH and the /license routes;
@@ -49,31 +31,20 @@ locals {
     cloudflare_dns_token     = var.cloudflare_api_token # only embedded when dns_challenge
   })
 
-  # provision-sso.sh config, rendered from vars. Endpoints are loopback because
-  # the configure step runs ON the box (no public DNS/cert needed at apply time).
-  # JMESPath/password values are double-quoted; avoid " and $ in the password.
-  sso_conf = <<-EOT
-    POCKETID_URL="http://127.0.0.1:1411"
-    POCKETID_API_KEY="${random_id.pocket_id_static_api_key.hex}"
+  # Admin credentials for bootstrap.sh (seeds the server admin + activates the EE
+  # license over loopback). SSO wiring is now owned by config/ declaratively.
+  # Endpoints are loopback because configure runs ON the box (no public DNS/cert
+  # needed at apply time). Avoid " and $ in the password.
+  # Admin + license bootstrap config (loopback). Also carries PANGOLIN_DASHBOARD_URL
+  # + PANGOLIN_ORG_ID for ssh-access.sh, which drives the Pangolin API for SSH RBAC.
+  admin_conf = <<-EOT
     PANGOLIN_URL="http://127.0.0.1:3000"
     PANGOLIN_DASHBOARD_URL="https://${local.dashboard_host}"
     PANGOLIN_ADMIN_EMAIL="${var.pangolin_admin_email}"
     PANGOLIN_ADMIN_PASSWORD="${var.pangolin_admin_password}"
     PANGOLIN_LICENSE_KEY="${var.pangolin_license_key}"
-    OIDC_CLIENT_ID="pangolin"
-    IDP_NAME="pocket-id"
-    SSO_STATE_FILE="${var.stack_dir}/.sso-state"
     PANGOLIN_ORG_ID="${local.org_id}"
-    PANGOLIN_ORG_NAME="${local.org_name}"
-    PANGOLIN_ROLES="${join(" ", var.pangolin_roles)}"
-    IDP_ROLE_MAPPING="${var.idp_role_mapping}"
-    IDP_ROLE_FALLBACK="${local.role_fallback}"
-    IDP_ORG_MAPPING="${local.org_mapping}"
   EOT
-
-  # Optional identity manifest (groups/users seeded into Pocket ID). Empty by
-  # default → SSO is wired but users auto-provision on first login.
-  sso_identity = var.sso_identity_file != "" ? file(pathexpand(var.sso_identity_file)) : "# no identities declared — users auto-provision on first OIDC login\n"
 
   pangolin_config = templatefile("${path.module}/files/config/config.yml.tftpl", {
     dashboard_host  = local.dashboard_host
@@ -226,21 +197,17 @@ resource "null_resource" "deploy" {
   ]
 }
 
-# --- Configure: headless admin + SSO, over loopback on the box (no UI) ---
-# This is what removes the old "create the admin / wire SSO in the dashboard"
-# manual steps. The app-plane has no Terraform provider, so we drive each
-# product's API with idempotent bash (provision-sso.sh) invoked here.
+# --- Configure: headless admin + EE license, over loopback on the box (no UI) ---
+# Seeds the Pangolin server admin and activates the license. SSO is owned by the
+# declarative config/ Terraform plane; this step no longer touches Pocket ID.
 resource "null_resource" "configure" {
   # Re-run only when the config-plane inputs change, NOT on every redeploy
   # (admin + SSO are idempotent; depends_on still orders us after deploy on the
   # first apply). A version bump no longer re-runs the whole SSO dance.
   triggers = {
-    sso_conf     = sha1(local.sso_conf)
-    sso_identity = sha1(local.sso_identity)
-    bootstrap    = filesha1("${path.module}/files/bootstrap.sh")
-    provision    = filesha1("${path.module}/../provision-sso.sh")
-    sso_lib      = filesha1("${path.module}/../lib/sso.sh")
-    enable_sso   = var.enable_sso
+    admin_conf     = sha1(local.admin_conf)
+    bootstrap      = filesha1("${path.module}/files/bootstrap.sh")
+    pang_bootstrap = filesha1("${path.module}/../lib/pang-bootstrap.sh")
   }
 
   connection {
@@ -251,7 +218,7 @@ resource "null_resource" "configure" {
     private_key = file(pathexpand(var.ssh_private_key_path))
   }
 
-  # The SSO library lives under lib/ next to provision-sso.sh on the box.
+  # The bootstrap library lives under lib/ on the box.
   provisioner "remote-exec" {
     inline = ["mkdir -p ${var.stack_dir}/lib"]
   }
@@ -261,27 +228,19 @@ resource "null_resource" "configure" {
     destination = "${var.stack_dir}/bootstrap.sh"
   }
   provisioner "file" {
-    source      = "${path.module}/../provision-sso.sh"
-    destination = "${var.stack_dir}/provision-sso.sh"
+    source      = "${path.module}/../lib/pang-bootstrap.sh"
+    destination = "${var.stack_dir}/lib/pang-bootstrap.sh"
   }
   provisioner "file" {
-    source      = "${path.module}/../lib/sso.sh"
-    destination = "${var.stack_dir}/lib/sso.sh"
-  }
-  provisioner "file" {
-    content     = local.sso_conf # holds admin password + api key
-    destination = "${var.stack_dir}/sso.conf"
-  }
-  provisioner "file" {
-    content     = local.sso_identity
-    destination = "${var.stack_dir}/sso.identity"
+    content     = local.admin_conf # holds admin credentials + license key
+    destination = "${var.stack_dir}/admin.conf"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "chmod 600 ${var.stack_dir}/sso.conf",
-      "chmod +x ${var.stack_dir}/bootstrap.sh ${var.stack_dir}/provision-sso.sh",
-      "${var.stack_dir}/bootstrap.sh ${var.stack_dir} ${var.enable_sso}",
+      "chmod 600 ${var.stack_dir}/admin.conf",
+      "chmod +x ${var.stack_dir}/bootstrap.sh",
+      "${var.stack_dir}/bootstrap.sh ${var.stack_dir}",
     ]
   }
 
@@ -291,7 +250,7 @@ resource "null_resource" "configure" {
 # --- Mint a root Integration API key headlessly (for the Phase-2 provider) ---
 # Uploads the actions list + mint script and runs it on the box (idempotent;
 # persists the token to $stack_dir/.integration-api-key). Depends on configure
-# so the server admin + lib/sso.sh are already in place.
+# so the server admin + lib/pang-bootstrap.sh are already in place.
 resource "null_resource" "mint_api_key" {
   triggers = {
     mint_script = filesha1("${path.module}/files/mint-api-key.sh")

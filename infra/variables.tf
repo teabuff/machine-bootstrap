@@ -159,51 +159,9 @@ variable "pangolin_admin_password" {
   sensitive   = true
 }
 
-variable "enable_sso" {
-  type        = bool
-  description = "Wire Pangolin <-> Pocket ID SSO headlessly after deploy (provision-sso.sh over loopback). The admin is always seeded regardless. Declarative SSO now lives in config/ (Phase 2); leave false."
-  default     = false
-}
-
-variable "sso_identity_file" {
-  type        = string
-  description = "Optional path to a provision-sso identity manifest (groups/users seeded into Pocket ID). Empty = wire SSO only; users auto-provision on first login. Keep realm specifics out of git."
-  default     = ""
-}
-
 variable "pangolin_org_id" {
   type        = string
   description = "Pangolin org slug to create (if absent) and map the IdP into, so SSO users have an org to join. Empty = derive from the first label of base_domain (e.g. 'tyo' from tyo.example.com)."
-  default     = ""
-}
-
-variable "pangolin_org_name" {
-  type        = string
-  description = "Display name for the org. Empty = same as the org id."
-  default     = ""
-}
-
-variable "pangolin_roles" {
-  type        = list(string)
-  description = "Custom org roles to create (Admin + Member are built in). The role-mapping must only return names that exist. New roles start with no resource permissions — grant per-resource later."
-  default     = ["Developer", "Guest"]
-}
-
-variable "idp_role_mapping" {
-  type        = string
-  description = "Verbatim full-expression OVERRIDE for the IdP role mapping. Empty (default) = provision-sso.sh COMPILES the mapping from the identity manifest's `group <name> -> <Role>` annotations, falling back to idp_role_fallback. Set this only to bypass the manifest with a hand-written JMESPath. Quote literals ('Admin'); guard absent claims ('groups && contains(groups,...)') — contains() on a missing claim throws and 500s the login; no backtick array literals (sourced by bash)."
-  default     = ""
-}
-
-variable "idp_role_fallback" {
-  type        = string
-  description = "JMESPath for the role(s) an SSO user gets when their groups match NO `-> Role` annotation in the manifest. Empty = Member for @<root-domain> emails, else Guest. Return an array (['Member']) to match the compiled mapping's multi-role type. Guard the email claim ('email && ends_with(...)'); no backticks (sourced by bash)."
-  default     = ""
-}
-
-variable "idp_org_mapping" {
-  type        = string
-  description = "JMESPath deciding org membership; must return the org id (or boolean true) to ADMIT the user — a bare string like 'true' is NEITHER and admits nobody. Empty = admit everyone (returns the org-id literal). For domain-gating use e.g. ends_with(email,'@example.com') && '<org-id>'."
   default     = ""
 }
 
@@ -256,7 +214,7 @@ variable "newt_version" {
 
 variable "ssh_access_roles" {
   type        = list(string)
-  description = "Org role NAMEs granted SSH access to this host (Admin is implicit and filtered out). Must match roles that exist (see pangolin_roles)."
+  description = "Org role NAMEs granted SSH access to this host (Admin is implicit and filtered out). Must match roles created in the config/ plane (var.role_names)."
   default     = ["Developer"]
 }
 

@@ -1,24 +1,19 @@
 #!/usr/bin/env bash
-# Headless post-deploy configuration — closes the loop the UI used to require.
-# Uploaded and invoked by OpenTofu (null_resource.configure) after deploy.sh has
-# the stack running. Idempotent; safe to re-run by hand:
-#   ./bootstrap.sh [stack_dir] [enable_sso]
-#
-# Order: ensure deps -> wait for pangolin (+ pocket-id) -> seed the server admin
-# with pangctl -> (optional) run provision-sso.sh over loopback to wire SSO.
-# Everything talks to 127.0.0.1, so no public DNS/cert needs to be live yet.
+# Headless post-deploy bootstrap: seed the Pangolin server admin + activate the
+# EE license, over loopback on the box (no public DNS/cert needed). Idempotent.
+#   ./bootstrap.sh [stack_dir]
+# SSO is provisioned declaratively by the config/ Terraform plane; this script no
+# longer touches Pocket ID or SSO wiring.
 set -euo pipefail
 
 stack_dir=${1:-/opt/pangolin-stack}
-enable_sso=${2:-true}
 cd "$stack_dir"
 
-# Credentials + endpoints come from the tofu-rendered, root-only sso.conf.
-[ -r "$stack_dir/sso.conf" ] || { echo "ERROR: $stack_dir/sso.conf missing" >&2; exit 1; }
+[ -r "$stack_dir/admin.conf" ] || { echo "ERROR: $stack_dir/admin.conf missing" >&2; exit 1; }
 set -a; # shellcheck source=/dev/null
-source "$stack_dir/sso.conf"; set +a
+source "$stack_dir/admin.conf"; set +a
 
-# provision-sso.sh needs jq + curl; a fresh box may have neither.
+# pang_license needs jq + curl; a fresh box may have neither.
 need_pkg=()
 command -v jq   >/dev/null 2>&1 || need_pkg+=(jq)
 command -v curl >/dev/null 2>&1 || need_pkg+=(curl)
@@ -31,8 +26,7 @@ if [ ${#need_pkg[@]} -gt 0 ]; then
   fi
 fi
 
-# Wait for Pangolin's API on loopback before driving it (compose up returns
-# before the healthcheck passes).
+# Wait for Pangolin's API on loopback before driving it.
 wait_http() {
   local url=$1 name=$2 waited=0
   echo "==> waiting for $name ($url)"
@@ -43,29 +37,16 @@ wait_http() {
 }
 wait_http "${PANGOLIN_URL%/}/api/v1/" pangolin
 
-# Seed the server admin headlessly (idempotent upsert) — replaces "create the
-# org/admin in the dashboard".
 echo "==> seeding Pangolin server admin ($PANGOLIN_ADMIN_EMAIL)"
 docker exec pangolin pangctl set-admin-credentials \
   --email "$PANGOLIN_ADMIN_EMAIL" --password "$PANGOLIN_ADMIN_PASSWORD"
 
-# Register the EE license headlessly (no /admin/license UI). Only meaningful on
-# the ee- image; the key is selected into that image by main.tf when set.
-# Idempotent: skips when already valid. Reuses lib/sso.sh's session helpers.
 if [ -n "${PANGOLIN_LICENSE_KEY:-}" ]; then
   echo "==> activating Pangolin EE license"
   # shellcheck source=/dev/null
-  . "$stack_dir/lib/sso.sh"
+  . "$stack_dir/lib/pang-bootstrap.sh"
   pang_login
   pang_license "$PANGOLIN_LICENSE_KEY"
-fi
-
-if [ "$enable_sso" = "true" ]; then
-  wait_http "${POCKETID_URL%/}/.well-known/openid-configuration" pocket-id
-  echo "==> wiring Pangolin <-> Pocket ID SSO"
-  bash "$stack_dir/provision-sso.sh" "$stack_dir/sso.conf" "$stack_dir/sso.identity"
-else
-  echo "==> SSO wiring disabled (enable_sso=false); admin seeded only"
 fi
 
 echo "==> bootstrap done"

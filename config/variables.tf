@@ -49,3 +49,28 @@ variable "bootstrap_state_config" {
     path = "../infra/terraform.tfstate"
   }
 }
+
+# --- Declarative identity manifest (replaces the bash group/user seeding) -----
+# Groups seeded into Pocket ID. pangolin_role (optional) compiles into the IdP
+# role mapping (the single source of truth for group->role). A group named
+# "pocket-admin" flips its members' Pocket ID isAdmin (no role).
+variable "groups" {
+  type = list(object({
+    name          = string
+    friendly_name = string
+    pangolin_role = optional(string, "")
+  }))
+  default = []
+}
+
+# Users pre-seeded into Pocket ID. username = email local-part by convention.
+# groups lists group names (must be declared in `groups`).
+variable "users" {
+  type = list(object({
+    username     = string
+    display_name = string
+    email        = string
+    groups       = optional(list(string), [])
+  }))
+  default = []
+}

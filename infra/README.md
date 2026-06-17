@@ -48,31 +48,23 @@ To pin versions for reproducibility, set `pangolin_version` / `gerbil_version` /
 `pocket_id_version` in `terraform.tfvars`. Keep `badger_version` matched to the Pangolin
 release (bump them together).
 
-## Headless admin + SSO (no UI)
+## Headless admin bootstrap (no UI)
 
 `apply` does more than deploy — a `null_resource.configure` step runs on the box (over
 loopback, so no public DNS/cert needs to be live) and:
 
 1. **Seeds the Pangolin server admin** with `pangctl set-admin-credentials`
    (`pangolin_admin_email` / `pangolin_admin_password`) — no setup wizard.
-2. **Wires SSO** (when `enable_sso = true`, the default) by running `../provision-sso.sh`:
-   Pocket ID's `STATIC_API_KEY` creates a hidden admin, the deterministic OIDC client
-   `pangolin` is created, and Pangolin gets an identity provider pointing at it — including
-   the two-pass redirect-URL callback. Optionally seeds groups/users from
-   `sso_identity_file` and maps group claims onto an org (`pangolin_org_id`).
+2. **Activates the EE license** headlessly (when `pangolin_license_key` is set).
 
-The mechanics live in `provision-sso.sh` / `lib/sso.sh` (Pangolin drives its own `/api/v1`
-with a session cookie + CSRF; Pocket ID uses `X-API-Key`); see the repo root
-[provisioning docs](../README.md). The dry-run test (`tests/dryrun-provision-sso.sh`)
-exercises the full flow offline.
+SSO wiring (Pocket ID OIDC client, Pangolin identity provider, org + role mapping) is owned
+declaratively by the `config/` Terraform plane — run it after `infra/` is up.
 
 ### The only human step
 
 Passkeys can't be provisioned headlessly: open `https://id.<base_domain>/setup` **once** to
-enrol your admin passkey, then log into `https://pangolin.<base_domain>` (via Pocket ID if
-SSO is on). `tofu output next_steps` prints exactly this.
-
-Set `enable_sso = false` to deploy + seed the admin only and wire SSO later.
+enrol your admin passkey, then log into `https://pangolin.<base_domain>`.
+`tofu output next_steps` prints exactly this.
 
 ## Adding a service behind Pangolin
 

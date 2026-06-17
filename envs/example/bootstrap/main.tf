@@ -17,7 +17,6 @@ module "bootstrap" {
   pangolin_admin_password = var.pangolin_admin_password
   pangolin_license_key    = var.pangolin_license_key
 
-  enable_sso        = false # declarative config/ owns SSO
   enable_ssh_access = false # identity-aware SSH returns in a later plan
 }
 

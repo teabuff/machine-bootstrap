@@ -7,7 +7,7 @@ set -euo pipefail
 
 actions_file=${1:?usage: mint-api-key.sh <actions-json-file>}
 stack_dir=${STACK_DIR:-/opt/pangolin-stack}
-sso_conf=${SSO_CONF:-$stack_dir/sso.conf}
+admin_conf=${ADMIN_CONF:-$stack_dir/admin.conf}
 token_file="$stack_dir/.integration-api-key"
 
 # Re-emit the persisted token if present (idempotent fast path).
@@ -16,11 +16,11 @@ if [[ -s $token_file ]]; then
   exit 0
 fi
 
-[[ -r $sso_conf ]] || { echo "cannot read sso.conf: $sso_conf" >&2; exit 1; }
+[[ -r $admin_conf ]] || { echo "cannot read admin.conf: $admin_conf" >&2; exit 1; }
 set -a; # shellcheck source=/dev/null
-source "$sso_conf"; set +a
-# shellcheck source=lib/sso.sh
-source "$stack_dir/lib/sso.sh" 2>/dev/null || source "$(dirname "$0")/../../lib/sso.sh"
+source "$admin_conf"; set +a
+# shellcheck source=lib/pang-bootstrap.sh
+source "$stack_dir/lib/pang-bootstrap.sh" 2>/dev/null || source "$(dirname "$0")/../../lib/pang-bootstrap.sh"
 
 action_ids=$(cat "$actions_file")
 
