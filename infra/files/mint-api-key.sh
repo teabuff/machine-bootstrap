@@ -25,7 +25,8 @@ source "$stack_dir/lib/sso.sh" 2>/dev/null || source "$(dirname "$0")/../../lib/
 action_ids=$(cat "$actions_file")
 
 pang_login
-read -r api_key_id api_key_secret < <(pang_create_api_key "pangolin-terraform")
+key_pair=$(pang_create_api_key "pangolin-terraform")
+read -r api_key_id api_key_secret <<< "$key_pair"
 pang_set_api_key_actions "$api_key_id" "$action_ids"
 
 token="${api_key_id}.${api_key_secret}"

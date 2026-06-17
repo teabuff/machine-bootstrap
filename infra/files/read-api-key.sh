@@ -11,8 +11,9 @@ port=$(echo "$q"      | jq -r '.port')
 key_path=$(echo "$q"  | jq -r '.key_path')
 stack_dir=$(echo "$q" | jq -r '.stack_dir')
 
-token=$(ssh -i "$(eval echo "$key_path")" -p "$port" \
+key_path="${key_path/#\~/$HOME}"   # expand a leading ~ without eval
+token=$(ssh -i "$key_path" -p "$port" \
   -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
-  "${user}@${host}" "cat ${stack_dir}/.integration-api-key")
+  "${user}@${host}" "cat '${stack_dir}/.integration-api-key'")
 [[ -n $token ]] || { echo "empty integration api key on box" >&2; exit 1; }
 jq -nc --arg k "$token" '{api_key:$k}'

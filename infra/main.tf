@@ -329,6 +329,8 @@ resource "null_resource" "mint_api_key" {
 # Surface the minted key as an output. The `query.dep` ties this read AFTER the
 # mint resource (forces ordering on a data source). Runs read-api-key.sh locally,
 # which SSHes in and cats the persisted token.
+# NOTE: after the first apply the resource id is in state, so this runs on every
+# `tofu plan` (an SSH into the box per plan); the box must be reachable for plan.
 data "external" "pangolin_api_key" {
   program = ["bash", "${path.module}/files/read-api-key.sh"]
   query = {

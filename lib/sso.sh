@@ -223,7 +223,7 @@ pang_create_api_key() {
   id=$(echo "$resp" | jq -r '.data.apiKeyId')
   secret=$(echo "$resp" | jq -r '.data.apiKey')
   [[ -n $id && $id != null && -n $secret && $secret != null ]] \
-    || { echo "api-key create did not return id+secret: $resp" >&2; return 1; }
+    || { echo "api-key create: unexpected response shape (missing apiKeyId/apiKey)" >&2; return 1; }
   echo "  + pangolin root api key $id" >&2
   echo "$id $secret"
 }
