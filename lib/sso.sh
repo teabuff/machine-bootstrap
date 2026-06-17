@@ -212,6 +212,32 @@ pang_login() {
   echo "  = pangolin logged in as $PANGOLIN_ADMIN_EMAIL" >&2
 }
 
+# Create a ROOT Integration API key via the session API (server-admin only).
+# Echoes "<apiKeyId> <apiKeySecret>" (space-separated). The usable Bearer token
+# is the two joined by a dot: "<apiKeyId>.<apiKeySecret>". The secret is shown
+# ONCE by this call and never again — callers must persist it.
+pang_create_api_key() {
+  local name=$1 resp
+  resp=$(pang PUT /api-key '^20[01]$' "$(jq -nc --arg n "$name" '{name:$n}')")
+  local id secret
+  id=$(echo "$resp" | jq -r '.data.apiKeyId')
+  secret=$(echo "$resp" | jq -r '.data.apiKey')
+  [[ -n $id && $id != null && -n $secret && $secret != null ]] \
+    || { echo "api-key create did not return id+secret: $resp" >&2; return 1; }
+  echo "  + pangolin root api key $id" >&2
+  echo "$id $secret"
+}
+
+# Grant a root API key its action set (REQUIRED — a key with no actions is 403
+# on every Integration API route, even when isRoot). actionIds is a JSON array
+# string. Idempotent: this REPLACES the key's action set each call.
+pang_set_api_key_actions() {
+  local api_key_id=$1 action_ids_json=$2
+  pang POST "/api-key/${api_key_id}/actions" '^200$' \
+    "$(jq -nc --argjson a "$action_ids_json" '{actionIds:$a}')" >/dev/null
+  echo "  = pangolin api key $api_key_id actions set" >&2
+}
+
 # Activate a Pangolin Enterprise Edition license headlessly (idempotent). The
 # /license/* routes exist ONLY on the ee- image and require a SERVER admin (the
 # bootstrap admin is one). Skips when a key is already valid, so re-runs are a
