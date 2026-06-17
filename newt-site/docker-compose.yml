@@ -1,7 +1,7 @@
 # Standalone newt for a homelab/site host (NOT the hub). Runs in Docker, dials
 # the remote Pangolin, and self-registers using a one-time provisioning key —
-# no per-site id/secret to copy by hand. Brought up by:
-#   ./setup-pangolin.sh --mode site
+# no per-site id/secret to copy by hand. Brought up with:
+#   cp .env.example .env && docker compose up -d
 #
 # On first boot newt exchanges NEWT_PROVISIONING_KEY for a permanent id+secret,
 # persists them to ./newt-data/newt.json, and ignores the key thereafter.

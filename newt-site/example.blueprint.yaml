@@ -1,6 +1,7 @@
-# Pangolin Blueprint — declarative resources, applied by setup-pangolin.sh via
-#   pangolin apply blueprint --file <this> --api-key <id.secret> --endpoint <url> --org <org>
-# and/or reconciled continuously by newt with --blueprint-file.
+# Pangolin Blueprint — declarative resources for this site, reconciled
+# continuously by newt: place this file under ./newt-data/ and set
+# NEWT_BLUEPRINT_FILE=/config/blueprint.yaml in docker-compose.yml (no API key —
+# newt is already an authenticated site).
 #
 # {{env.X}} is substituted from the environment at apply time, so one blueprint
 # serves every region. Keep real domains OUT of git — they arrive via env.

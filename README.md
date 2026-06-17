@@ -115,7 +115,7 @@ per-role RBAC: a fixed-GID Unix **group** (via `apply-host.sh`), scoped **sudo**
 connector for a homelab/site host that self-registers with a provisioning key (and can
 continuously apply a resource blueprint). Not needed by the hub itself.
 
-> Why bash behind OpenTofu and not Terraform resources? There is no provider for Pangolin/
-> Pocket ID *application* objects (admin, OIDC client, IdP) — the closest, blueprint-declared
-> IdPs, is unshipped upstream (fosrl/pangolin#1895). So `host/` owns the infra-shaped,
-> stateful work and calls idempotent bash for the API dance.
+> Why some bash behind OpenTofu? The OIDC client (Pocket ID) and the IdP + org/role mapping
+> (Pangolin) are declarative via third-party providers in `idp/` and `access/`. Only two things
+> have no provider and stay as idempotent bash in `host/`: seeding the server admin and activating
+> the EE license — plus minting the Integration API key the `access/` provider authenticates with.
