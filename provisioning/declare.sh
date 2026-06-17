@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/declare.sh — tiny idempotent "declarative" host-config engine.
+# provisioning/declare.sh — tiny idempotent "declarative" host-config engine.
 #
 # A host manifest sources this file and then calls the verbs below; each verb
 # converges one resource to the declared state. Re-running is always safe.

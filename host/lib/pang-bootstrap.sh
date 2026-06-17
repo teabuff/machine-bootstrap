@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/pang-bootstrap.sh — Pangolin bootstrap primitives: mint the first
+# host/lib/pang-bootstrap.sh — Pangolin bootstrap primitives: mint the first
 # Integration API key and activate the EE license, run on the box over loopback.
 #
 # Auth model: `pangctl set-admin-credentials` seeds the server admin; we then

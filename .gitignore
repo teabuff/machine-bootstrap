@@ -4,8 +4,8 @@ docs/superpowers/
 
 # Per-host declarative manifests (real ones carry private values). Only the
 # example template is tracked.
-hosts/*.host
-!hosts/example.host
+provisioning/manifests/*.host
+!provisioning/manifests/example.host
 
 # Newt site connector — local secrets/credentials/state
 newt-site/.env

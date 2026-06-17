@@ -1,5 +1,5 @@
 # Example host manifest — desired state, applied idempotently:
-#   sudo ./apply-host.sh hosts/<name>.host
+#   sudo provisioning/apply-host.sh provisioning/manifests/<name>.host
 #
 # Verbs:
 #   group        <name> <gid>                 GIDs are FIXED across hosts so that
