@@ -43,6 +43,7 @@ resource "null_resource" "mint_api_key" {
 # NOTE: after the first apply the resource id is in state, so this runs on every
 # `tofu plan` (an SSH into the box per plan); the box must be reachable for plan.
 data "external" "pangolin_api_key" {
+  count   = var.read_api_key ? 1 : 0
   program = ["bash", "${path.module}/files/read-api-key.sh"]
   query = {
     host      = local.ssh_host

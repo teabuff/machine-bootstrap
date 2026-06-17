@@ -132,6 +132,12 @@ variable "manage_firewall" {
   default     = true
 }
 
+variable "read_api_key" {
+  type        = bool
+  description = "Read the minted Integration API key back from the box (one SSH per plan). Set false for offline/CI plans that don't need the key output."
+  default     = true
+}
+
 variable "acme_dns_challenge" {
   type        = bool
   description = "Use the Let's Encrypt DNS-01 challenge to issue a WILDCARD cert (*.base_domain) instead of per-host HTTP-01. Hides hostnames from CT logs and dodges rate limits, but puts the Cloudflare DNS token on the box (Traefik writes _acme-challenge TXT records). Requires DNS on Cloudflare; the token needs Zone:Read + DNS:Edit."
