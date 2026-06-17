@@ -13,8 +13,8 @@ output "server_ip" {
 }
 
 output "pangolin_api_key" {
-  description = "Root Pangolin Integration API key (Bearer token) for the Phase-2 provider."
-  value       = data.external.pangolin_api_key.result.api_key
+  description = "Root Pangolin Integration API key (Bearer token) for the Phase-2 provider. Null when read_api_key = false."
+  value       = var.read_api_key ? data.external.pangolin_api_key[0].result.api_key : null
   sensitive   = true
 }
 
