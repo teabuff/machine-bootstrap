@@ -12,16 +12,15 @@ pid=${2:?}
 ip=${3:?}
 R=1.1.1.1
 
-# Returns "ok:<code>" or "fail:<code>" for a given host+path.
+# Returns "ok:<code>" or "fail:<code>" for a given host+path. SINGLE-SHOT (no
+# retry loop): this runs as a check{} data source on every plan, so it must be a
+# fast snapshot, not a wait-for-cert loop (advisory — a transient fail is a
+# non-blocking warning the next plan clears).
 check_endpoint() {
-  local host=$1 path=${2:-/} code=""
-  for _ in $(seq 1 24); do
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 \
-      --resolve "$host:443:$ip" "https://$host$path" 2>/dev/null || true)
-    case $code in 2??|3??) echo "ok:$code"; return ;; esac
-    sleep 5
-  done
-  echo "fail:${code:-no-response}"
+  local host=$1 path=${2:-/} code
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 \
+    --resolve "$host:443:$ip" "https://$host$path" 2>/dev/null || true)
+  case $code in 2?? | 3??) echo "ok:$code" ;; *) echo "fail:${code:-no-response}" ;; esac
 }
 
 r1=$(check_endpoint "$dash" "/")
