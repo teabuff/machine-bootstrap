@@ -18,7 +18,18 @@ locals {
   # Array form ['Member'] matches Pangolin's multi-role return type. Guards the email
   # claim (ends_with on a null claim throws -> 500 login).
   default_role_fallback = "email && ends_with(email, '@${local.root_domain}') && ['Member'] || ['Guest']"
-  role_mapping          = var.idp_role_mapping != "" ? var.idp_role_mapping : local.default_role_fallback
+
+  # Compile group->role from var.groups (the bash build_role_mapping equivalent):
+  # a user in several mapped groups gets all those roles; unmatched -> fallback.
+  mapped_groups = [for g in var.groups : g if g.pangolin_role != ""]
+  compiled_role_mapping = length(local.mapped_groups) > 0 ? format(
+    "([%s][?@]) || (%s)",
+    join(", ", [for g in local.mapped_groups : "groups && contains(groups, '${g.name}') && '${g.pangolin_role}'"]),
+    local.default_role_fallback,
+  ) : local.default_role_fallback
+
+  # Verbatim override wins; else the compiled mapping.
+  role_mapping = var.idp_role_mapping != "" ? var.idp_role_mapping : local.compiled_role_mapping
 
   # Org membership: must return the org id (or true) to admit. Default = admit all.
   org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
