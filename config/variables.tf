@@ -44,6 +44,8 @@ variable "bootstrap_state_backend" {
 
 variable "bootstrap_state_config" {
   type        = any
-  description = "terraform_remote_state config for the bootstrap state. null = read the sibling local state; for R2 pass the s3 config object {bucket, key, region, profile, endpoints = {s3=...}, skip_* , use_path_style, ...}."
-  default     = null
+  description = "terraform_remote_state config for the bootstrap state. Default reads the sibling local state (standalone). For R2, pass the s3 config object {bucket, key, region, profile, endpoints = {s3=...}, skip_*, use_path_style, ...} along with bootstrap_state_backend = \"s3\"."
+  default = {
+    path = "../infra/terraform.tfstate"
+  }
 }
