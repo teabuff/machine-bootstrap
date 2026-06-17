@@ -1,6 +1,6 @@
 locals {
-  dashboard_url = local.bootstrap.pangolin_url       # https://pangolin.<base_domain>
-  pocket_id_url = local.bootstrap.pocket_id_base_url # https://id.<base_domain>
+  dashboard_url = local.bootstrap.pangolin_dashboard_url # https://pangolin.<base_domain>
+  pocket_id_url = local.bootstrap.pocket_id_base_url     # https://id.<base_domain>
   org_id        = local.bootstrap.org_id
   root_domain   = local.bootstrap.root_domain
 

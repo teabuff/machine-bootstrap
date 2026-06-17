@@ -38,11 +38,6 @@ output "base_domain" {
   value = var.base_domain
 }
 
-output "pangolin_url" {
-  description = "Public Pangolin dashboard base URL (the pangolin provider's url)."
-  value       = "https://${local.dashboard_host}"
-}
-
 output "pocket_id_base_url" {
   description = "Public Pocket ID base URL (the pocketid provider's base_url)."
   value       = "https://${local.pocket_id_host}"

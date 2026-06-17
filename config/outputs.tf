@@ -9,5 +9,6 @@ output "idp_redirect_url" {
 }
 
 output "pangolin_client_id" {
-  value = pocketid_client.pangolin.client_id
+  description = "Deterministic Pocket ID OIDC client_id ('pangolin') consumed by the Pangolin IdP."
+  value       = pocketid_client.pangolin.client_id
 }

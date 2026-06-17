@@ -3,7 +3,7 @@ locals {
 }
 
 provider "pangolin" {
-  url     = local.bootstrap.pangolin_url
+  url     = local.bootstrap.pangolin_dashboard_url
   api_key = local.bootstrap.pangolin_api_key
   org_id  = local.bootstrap.org_id
 }
