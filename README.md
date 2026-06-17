@@ -50,34 +50,25 @@ Smoke test (needs Docker): `bash tests/smoke-apply-host.sh`.
 ## Pangolin + Pocket ID (remote, zero-touch)
 
 A self-hosted [Pangolin](https://docs.pangolin.net) reverse proxy + [Pocket ID](https://pocket-id.org)
-OIDC provider on a remote box, brought up and configured with **no UI clicks**. Two layers:
+OIDC provider on a remote box, brought up and configured with **no UI clicks**.
 
-- **`infra/`** — OpenTofu/Terraform (works with `tofu` or `terraform`). Owns the
-  infra + deploy: Cloudflare DNS (apex + `*.wildcard`), generated secrets, renders the
-  compose stack (`pangolin` + `gerbil` + `traefik` + `pocket-id`), ships it to a
-  bring-your-own server over SSH, and runs it. Then a `configure` step closes the loop —
-  see below. Start at [`infra/README.md`](infra/README.md):
+## Terraform roots
 
-  ```sh
-  cd infra && cp example.tfvars terraform.tfvars   # edit it
-  tofu init && tofu apply -var-file=terraform.tfvars
-  ```
+Three OpenTofu roots, applied in order, with a one-directional dependency:
 
-- **`provision-sso.sh`** + **`lib/sso.sh`** — the headless config-plane invoked by `infra/`
-  (or by hand). Seeds the Pangolin admin (`pangctl`), then wires Pangolin ⇄ Pocket ID SSO
-  entirely over each product's HTTP API: Pocket ID's `STATIC_API_KEY` → a hidden admin →
-  deterministic OIDC client; Pangolin's `/api/v1` driven with a session cookie + CSRF →
-  identity provider + the two-pass redirect callback. Idempotent; realm config lives in
-  private `hosts/*.sso.{conf,identity}` (gitignored; see the `example.*`).
+| Root      | Layer            | Owns                                                       | Reads                            |
+| --------- | ---------------- | ---------------------------------------------------------- | -------------------------------- |
+| `host/`   | machine          | box, DNS, certs, docker compose, API-key mint              | —                                |
+| `idp/`    | Pocket ID (IdP)  | OIDC client, groups, users                                 | `host`                           |
+| `access/` | Pangolin (proxy) | org, roles, OIDC IdP registration + org/role mapping       | `host`, `idp` (client id/secret) |
 
-  ```sh
-  ./provision-sso.sh hosts/<realm>.sso.conf hosts/<realm>.sso.identity   # standalone use
-  bash tests/dryrun-provision-sso.sh                                     # offline test
-  ```
+Apply order: `host` → `idp` → `access`. The group **name** is the only policy
+contract between `idp` and `access`. For multi-env state on Cloudflare R2, each
+root takes `*_state_backend`/`*_state_config` (see each root's `example.tfvars`).
 
 ### Host SSH prep (one-time, manual)
 
-`infra/` connects as **root** and runs privileged steps directly (no `sudo`
+`host/` connects as **root** and runs privileged steps directly (no `sudo`
 wrapping), so the box must accept key-based root SSH with your deploy key. This
 is deliberately **not** automated — set it up once on a fresh box, as its
 initial sudo user:
@@ -107,7 +98,7 @@ mapping need no passkey and no UI.
 
 ### Identity-aware SSH (Enterprise Edition)
 
-`infra/` also runs Pangolin's **Enterprise Edition** image and, with
+`host/` also runs Pangolin's **Enterprise Edition** image and, with
 `enable_ssh_access` (on by default), provisions identity-aware SSH. EE is **free**
 for personal use / businesses under USD 100k revenue but is **required** for SSH:
 set `pangolin_license_key` in tfvars and it is activated headlessly on apply
@@ -118,7 +109,7 @@ optional public browser-SSH resource (`shell.<domain>`). A user authenticates
 with their Pocket ID identity, gets a 5-minute CA-signed cert, and is
 JIT-provisioned as a Linux user (= their email local-part, prefixed `p-`) with
 per-role RBAC: a fixed-GID Unix **group** (via `apply-host.sh`), scoped **sudo**
-(e.g. `ufw`), and a home dir. See [`infra/SSH-ACCESS.md`](infra/SSH-ACCESS.md).
+(e.g. `ufw`), and a home dir. See [`host/SSH-ACCESS.md`](host/SSH-ACCESS.md).
 
 **`newt-site/`** is an optional add-on: a Dockerized [Newt](https://github.com/fosrl/newt)
 connector for a homelab/site host that self-registers with a provisioning key (and can
@@ -126,5 +117,5 @@ continuously apply a resource blueprint). Not needed by the hub itself.
 
 > Why bash behind OpenTofu and not Terraform resources? There is no provider for Pangolin/
 > Pocket ID *application* objects (admin, OIDC client, IdP) — the closest, blueprint-declared
-> IdPs, is unshipped upstream (fosrl/pangolin#1895). So `infra/` owns the infra-shaped,
+> IdPs, is unshipped upstream (fosrl/pangolin#1895). So `host/` owns the infra-shaped,
 > stateful work and calls idempotent bash for the API dance.

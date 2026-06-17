@@ -1,6 +1,6 @@
 # newt-site — Dockerized Newt connector for a site/homelab host
 
-Optional add-on (not part of the `infra/` hub). Runs a [Newt](https://github.com/fosrl/newt)
+Optional add-on (not part of the `host/` hub). Runs a [Newt](https://github.com/fosrl/newt)
 connector on a machine behind NAT/CGNAT so its local services become Pangolin resources —
 the box dials *out* to the hub, nothing inbound.
 

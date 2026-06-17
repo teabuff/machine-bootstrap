@@ -1,0 +1,36 @@
+# Rendered from infra/files/config/config.yml.tftpl. See https://docs.pangolin.net/
+gerbil:
+    start_port: 51820
+    base_endpoint: "${dashboard_host}"
+
+app:
+    dashboard_url: "https://${dashboard_host}"
+    log_level: "info"
+    telemetry:
+        anonymous_usage: true
+
+domains:
+    domain1:
+        base_domain: "${base_domain}"
+%{ if dns_challenge ~}
+        prefer_wildcard_cert: true
+        cert_resolver: letsencrypt
+%{ endif ~}
+
+server:
+    secret: "${pangolin_secret}"
+    cors:
+        origins: ["https://${dashboard_host}"]
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        allowed_headers: ["X-CSRF-Token", "Content-Type"]
+        credentials: false
+
+flags:
+    require_email_verification: false
+    disable_signup_without_invite: true
+    disable_user_create_org: false
+    allow_raw_resources: true
+    # Start the Integration API (Bearer-auth, /v1 on port 3003). Required for the
+    # declarative access/ plane (the `pangolin` Terraform provider). Routed
+    # publicly by Traefik (dynamic_config.yml) and gated by the Bearer API key.
+    enable_integration_api: true
