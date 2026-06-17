@@ -193,10 +193,9 @@ resource "null_resource" "deploy" {
   ]
 }
 
-# --- Configure: headless admin + SSO, over loopback on the box (no UI) ---
-# This is what removes the old "create the admin / wire SSO in the dashboard"
-# manual steps. The app-plane has no Terraform provider, so we drive each
-# product's API with idempotent bash (provision-sso.sh) invoked here.
+# --- Configure: headless admin + EE license, over loopback on the box (no UI) ---
+# Seeds the Pangolin server admin and activates the license. SSO is owned by the
+# declarative config/ Terraform plane; this step no longer touches Pocket ID.
 resource "null_resource" "configure" {
   # Re-run only when the config-plane inputs change, NOT on every redeploy
   # (admin + SSO are idempotent; depends_on still orders us after deploy on the

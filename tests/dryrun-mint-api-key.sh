@@ -39,15 +39,15 @@ MOCK
 chmod +x "$WORK/curl"
 export PATH="$WORK:$PATH"
 
-# Minimal sso.conf the script sources.
-cat > "$WORK/sso.conf" <<EOF
+# Minimal admin.conf the script sources.
+cat > "$WORK/admin.conf" <<EOF
 PANGOLIN_URL="http://127.0.0.1:3000"
 PANGOLIN_ADMIN_EMAIL="admin@test.local"
 PANGOLIN_ADMIN_PASSWORD="pw"
 EOF
 
 # Run the script; it should print {"api_key":"key-123.secret-xyz"} on stdout.
-TOKEN_JSON=$(STACK_DIR="$WORK" SSO_CONF="$WORK/sso.conf" \
+TOKEN_JSON=$(STACK_DIR="$WORK" ADMIN_CONF="$WORK/admin.conf" \
   bash "$REPO/infra/files/mint-api-key.sh" "$REPO/infra/files/pangolin-actions.json")
 
 fail() { echo "FAIL: $1" >&2; echo "--- requests ---" >&2; cat "$LOG" >&2; exit 1; }
@@ -59,7 +59,7 @@ grep -q "PUT .*/api/v1/api-key " "$LOG"            || fail "no create-key PUT"
 grep -q "POST .*/api/v1/api-key/key-123/actions"   "$LOG" || fail "no grant-actions POST"
 # Idempotency: a second run with the token already persisted must NOT create again.
 : > "$LOG"
-TOKEN_JSON2=$(STACK_DIR="$WORK" SSO_CONF="$WORK/sso.conf" \
+TOKEN_JSON2=$(STACK_DIR="$WORK" ADMIN_CONF="$WORK/admin.conf" \
   bash "$REPO/infra/files/mint-api-key.sh" "$REPO/infra/files/pangolin-actions.json")
 echo "$TOKEN_JSON2" | jq -e '.api_key == "key-123.secret-xyz"' >/dev/null \
   || fail "second run did not return the persisted token"
