@@ -4,7 +4,7 @@ locals {
   pocket_id_host = "${var.pocket_id_subdomain}.${var.base_domain}"
   ssh_host       = var.ssh_host != "" ? var.ssh_host : var.server_ip
 
-  # Org slug consumed by the org_id output (used by config/ to create and bind the
+  # Org slug consumed by the org_id output (used by access/ to create and bind the
   # IdP into). Defaults to the root (registrable) domain with dots hyphenated:
   # tyo.example.com -> "example-com" (last two labels; override pangolin_org_id
   # for multi-part TLDs like .co.uk).
@@ -33,7 +33,7 @@ locals {
   })
 
   # Admin credentials for bootstrap.sh (seeds the server admin + activates the EE
-  # license over loopback). SSO wiring is now owned by config/ declaratively.
+  # license over loopback). SSO wiring is now owned by the idp/ and access/ planes declaratively.
   # Endpoints are loopback because configure runs ON the box (no public DNS/cert
   # needed at apply time). Avoid " and $ in the password.
   # Admin + license bootstrap config (loopback). Also carries PANGOLIN_DASHBOARD_URL

@@ -2,7 +2,7 @@
 # Headless post-deploy bootstrap: seed the Pangolin server admin + activate the
 # EE license, over loopback on the box (no public DNS/cert needed). Idempotent.
 #   ./bootstrap.sh [stack_dir]
-# SSO is provisioned declaratively by the config/ Terraform plane; this script no
+# SSO is provisioned declaratively by the idp/ and access/ planes; this script no
 # longer touches Pocket ID or SSO wiring.
 set -euo pipefail
 

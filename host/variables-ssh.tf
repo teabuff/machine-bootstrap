@@ -28,7 +28,7 @@ variable "newt_version" {
 
 variable "ssh_access_roles" {
   type        = list(string)
-  description = "Org role NAMEs granted SSH access to this host (Admin is implicit and filtered out). Must match roles created in the config/ plane (var.role_names)."
+  description = "Org role NAMEs granted SSH access to this host (Admin is implicit and filtered out). Must match roles created in the access/ plane (var.role_names)."
   default     = ["Developer"]
 }
 

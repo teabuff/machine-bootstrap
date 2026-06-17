@@ -36,5 +36,5 @@ pangolin_admin_email    = "admin@example.com" # lower-case; seeded via pangctl
 pangolin_admin_password = "change-me-strong"  # avoid " and $ ; kept in state only
 #
 # Org id is derived from the root domain (tyo.example.com -> "example-com") and
-# exposed as the `org_id` output for the config/ SSO plane. Override if needed:
+# exposed as the `org_id` output for the access/ SSO plane. Override if needed:
 # pangolin_org_id = "example-com"

@@ -58,7 +58,7 @@ loopback, so no public DNS/cert needs to be live) and:
 2. **Activates the EE license** headlessly (when `pangolin_license_key` is set).
 
 SSO wiring (Pocket ID OIDC client, Pangolin identity provider, org + role mapping) is owned
-declaratively by the `config/` Terraform plane — run it after `host/` is up.
+declaratively by the `idp/` and `access/` planes — run them after `host/` is up.
 
 ### The only human step
 

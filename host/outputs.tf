@@ -25,7 +25,7 @@ output "pocket_id_static_api_key" {
 }
 
 output "org_id" {
-  description = "Derived Pangolin org slug (config/ creates and binds the IdP to it)."
+  description = "Derived Pangolin org slug (access/ creates and binds the IdP to it)."
   value       = local.org_id
 }
 

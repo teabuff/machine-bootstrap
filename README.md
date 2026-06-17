@@ -50,30 +50,21 @@ Smoke test (needs Docker): `bash tests/smoke-apply-host.sh`.
 ## Pangolin + Pocket ID (remote, zero-touch)
 
 A self-hosted [Pangolin](https://docs.pangolin.net) reverse proxy + [Pocket ID](https://pocket-id.org)
-OIDC provider on a remote box, brought up and configured with **no UI clicks**. Two layers:
+OIDC provider on a remote box, brought up and configured with **no UI clicks**.
 
-- **`host/`** — OpenTofu/Terraform (works with `tofu` or `terraform`). Owns the
-  infra + deploy: Cloudflare DNS (apex + `*.wildcard`), generated secrets, renders the
-  compose stack (`pangolin` + `gerbil` + `traefik` + `pocket-id`), ships it to a
-  bring-your-own server over SSH, and runs it. Then a `configure` step closes the loop —
-  see below. Start at [`host/README.md`](host/README.md):
+## Terraform roots
 
-  ```sh
-  cd host && cp example.tfvars terraform.tfvars   # edit it
-  tofu init && tofu apply -var-file=terraform.tfvars
-  ```
+Three OpenTofu roots, applied in order, with a one-directional dependency:
 
-- **`provision-sso.sh`** + **`lib/sso.sh`** — the headless config-plane invoked by `host/`
-  (or by hand). Seeds the Pangolin admin (`pangctl`), then wires Pangolin ⇄ Pocket ID SSO
-  entirely over each product's HTTP API: Pocket ID's `STATIC_API_KEY` → a hidden admin →
-  deterministic OIDC client; Pangolin's `/api/v1` driven with a session cookie + CSRF →
-  identity provider + the two-pass redirect callback. Idempotent; realm config lives in
-  private `hosts/*.sso.{conf,identity}` (gitignored; see the `example.*`).
+| Root      | Layer            | Owns                                                       | Reads                            |
+| --------- | ---------------- | ---------------------------------------------------------- | -------------------------------- |
+| `host/`   | machine          | box, DNS, certs, docker compose, API-key mint              | —                                |
+| `idp/`    | Pocket ID (IdP)  | OIDC client, groups, users                                 | `host`                           |
+| `access/` | Pangolin (proxy) | org, roles, OIDC IdP registration + org/role mapping       | `host`, `idp` (client id/secret) |
 
-  ```sh
-  ./provision-sso.sh hosts/<realm>.sso.conf hosts/<realm>.sso.identity   # standalone use
-  bash tests/dryrun-provision-sso.sh                                     # offline test
-  ```
+Apply order: `host` → `idp` → `access`. The group **name** is the only policy
+contract between `idp` and `access`. For multi-env state on Cloudflare R2, each
+root takes `*_state_backend`/`*_state_config` (see each root's `example.tfvars`).
 
 ### Host SSH prep (one-time, manual)
 

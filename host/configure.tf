@@ -1,7 +1,7 @@
 # Configure: headless admin bootstrap and EE license activation over loopback.
 # --- Configure: headless admin + EE license, over loopback on the box (no UI) ---
 # Seeds the Pangolin server admin and activates the license. SSO is owned by the
-# declarative config/ Terraform plane; this step no longer touches Pocket ID.
+# idp/ (Pocket ID) and access/ (Pangolin) planes; this step no longer touches Pocket ID.
 resource "null_resource" "configure" {
   # Re-run only when the config-plane inputs change, NOT on every redeploy
   # (admin + SSO are idempotent; depends_on still orders us after deploy on the
