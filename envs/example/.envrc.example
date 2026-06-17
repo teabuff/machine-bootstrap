@@ -1,0 +1,15 @@
+# Copy to .envrc (gitignored) and source it (or use direnv). Secrets only —
+# wire them from your own secret store (1Password/pass/manual export).
+
+# R2 state backend: the [r2] profile in ~/.aws/credentials already provides the
+# keys, so nothing is needed here for the backend. (If you prefer env creds:
+#   export AWS_ACCESS_KEY_ID=... ; export AWS_SECRET_ACCESS_KEY=... )
+
+# App secrets passed into the bootstrap module (TF_VAR_<name>):
+export TF_VAR_cloudflare_api_token="cf-token-with-Zone.DNS.Edit"
+export TF_VAR_pangolin_admin_password="change-me-strong"   # avoid " and $
+export TF_VAR_pangolin_license_key="your-pangolin-ee-key"
+
+# Only if you hit XAmzContentSHA256Mismatch on R2 with a newer tofu:
+# export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+# export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required

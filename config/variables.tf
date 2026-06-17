@@ -32,3 +32,18 @@ variable "idp_org_mapping" {
   description = "JMESPath deciding org membership; must return the org id (or true) to admit. Empty = admit everyone (returns the org-id literal)."
   default     = ""
 }
+
+# --- Where to read the bootstrap (infra/) state from -------------------------
+# Default reads the sibling local state (standalone use). For multi-env, the
+# per-env config/ root passes backend = "s3" + the R2 config of its bootstrap key.
+variable "bootstrap_state_backend" {
+  type        = string
+  description = "Backend type for reading the bootstrap state ('local' standalone, 's3' for R2 multi-env)."
+  default     = "local"
+}
+
+variable "bootstrap_state_config" {
+  type        = any
+  description = "terraform_remote_state config for the bootstrap state. null = read the sibling local state; for R2 pass the s3 config object {bucket, key, region, profile, endpoints = {s3=...}, skip_* , use_path_style, ...}."
+  default     = null
+}
