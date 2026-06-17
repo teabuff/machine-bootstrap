@@ -12,20 +12,25 @@ resource "terraform_data" "license_check" {
 }
 
 # --- Pre-flight: advisory DNS check from the operator machine (never blocks) ---
-resource "null_resource" "preflight" {
-  triggers = { always = timestamp() } # re-check every apply
-  provisioner "local-exec" {
-    command = "${path.module}/files/preflight.sh ${var.base_domain} ${local.dashboard_host} ${local.pocket_id_host} ${var.server_ip}"
+check "dns_preflight" {
+  data "external" "preflight" {
+    program = ["bash", "${path.module}/files/preflight.sh", var.base_domain, local.dashboard_host, local.pocket_id_host, var.server_ip]
+  }
+  assert {
+    condition     = data.external.preflight.result.ok == "true"
+    error_message = data.external.preflight.result.message
   }
 }
 
 # --- Verify: prove the endpoints actually serve a valid cert (never blocks) ---
 # Runs on the operator machine, forces the server IP (immune to local DNS cache),
 # and checks each endpoint returns a healthy code with a valid Let's Encrypt cert.
-resource "null_resource" "verify" {
-  triggers   = { always = timestamp() } # re-verify every apply
-  depends_on = [null_resource.configure]
-  provisioner "local-exec" {
-    command = "${path.module}/files/verify.sh ${local.dashboard_host} ${local.pocket_id_host} ${var.server_ip}"
+check "endpoints" {
+  data "external" "verify" {
+    program = ["bash", "${path.module}/files/verify.sh", local.dashboard_host, local.pocket_id_host, var.server_ip]
+  }
+  assert {
+    condition     = data.external.verify.result.ok == "true"
+    error_message = data.external.verify.result.message
   }
 }
