@@ -52,10 +52,10 @@ PUB_NICE=${SITE_NAME}-browser-ssh   # niceId for the public browser-SSH resource
 SUDO=""
 [ "$(id -u)" -eq 0 ] || SUDO="sudo"
 
-# Pangolin creds/org/endpoint come from the stack's sso.conf (already on the
+# Pangolin creds/endpoint come from the stack's admin.conf (already on the
 # box from the configure step); the HTTP plumbing (pang/pang_login) is reused
 # from lib/pang-bootstrap.sh rather than reimplemented.
-set -a; . "$STACK_DIR/sso.conf"; set +a
+set -a; . "$STACK_DIR/admin.conf"; set +a
 # shellcheck source=/dev/null
 . "$STACK_DIR/lib/pang-bootstrap.sh"
 

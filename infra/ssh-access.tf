@@ -56,7 +56,7 @@ resource "null_resource" "ssh_access" {
     ]
   }
 
-  # Needs the stack deployed and SSO/admin configured (sso.conf + lib/pang-bootstrap.sh on
-  # the box, org + roles created) before it can drive the Pangolin API.
+  # Needs the stack deployed and admin configured (admin.conf + lib/pang-bootstrap.sh on
+  # the box) before it can drive the Pangolin API.
   depends_on = [null_resource.configure]
 }

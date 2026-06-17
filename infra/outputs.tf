@@ -47,11 +47,12 @@ output "next_steps" {
   description = "What apply already did, and the only step that needs a human."
   value       = <<-EOT
     Provisioned with no UI by `null_resource.configure` (over loopback on the box):
-      - Pangolin server admin (${var.pangolin_admin_email}) via pangctl.
-      ${var.enable_sso ? "- Pocket ID OIDC client 'pangolin' + Pangolin identity provider 'pocket-id' (provision-sso.sh)." : "- SSO wiring skipped (enable_sso = false)."}
+      - Pangolin server admin (${var.pangolin_admin_email}) seeded via pangctl.
+      - EE license activated (if pangolin_license_key is set).
+    SSO wiring is owned declaratively by the config/ Terraform plane.
 
     Only human step (passkeys can't be provisioned headlessly):
       - Open https://${local.pocket_id_host}/setup once and enrol your admin passkey,
-        then log into https://${local.dashboard_host} — via Pocket ID if SSO is on.
+        then log into https://${local.dashboard_host}.
   EOT
 }
