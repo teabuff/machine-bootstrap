@@ -161,8 +161,8 @@ variable "pangolin_admin_password" {
 
 variable "enable_sso" {
   type        = bool
-  description = "Wire Pangolin <-> Pocket ID SSO headlessly after deploy (provision-sso.sh over loopback). The admin is always seeded regardless."
-  default     = true
+  description = "Wire Pangolin <-> Pocket ID SSO headlessly after deploy (provision-sso.sh over loopback). The admin is always seeded regardless. Declarative SSO now lives in config/ (Phase 2); leave false."
+  default     = false
 }
 
 variable "sso_identity_file" {
@@ -244,8 +244,8 @@ variable "pangolin_license_key" {
 
 variable "enable_ssh_access" {
   type        = bool
-  description = "Provision identity-aware SSH for this host via Pangolin's auth-daemon (newt on systemd + SSH resource + sshd CA drop-in). On by default; relies on the EE license above. Set false to skip SSH and run only the web stack."
-  default     = true
+  description = "Provision identity-aware SSH for this host via Pangolin's auth-daemon (newt on systemd + SSH resource + sshd CA drop-in). On by default; relies on the EE license above. Set false to skip SSH and run only the web stack. Disabled during the bash->provider migration; identity-aware SSH returns declaratively in a later plan."
+  default     = false
 }
 
 variable "newt_version" {
