@@ -1,7 +1,9 @@
 terraform {
   required_version = ">= 1.7.0"
 
-  backend "local" {} # Plan 3 swaps this for the R2 (s3) backend.
+  # No backend block: as a standalone root this defaults to local state; as a
+  # module (per-env dir in the private envs repo) the calling root supplies the
+  # R2 backend. A child module must not declare a backend.
 
   required_providers {
     pangolin = {

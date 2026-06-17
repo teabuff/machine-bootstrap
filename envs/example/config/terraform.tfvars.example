@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (gitignored).
+org_name = "Example Org" # display name; org_id is derived in the bootstrap
+
+# role_names / idp_role_mapping / idp_org_mapping can be overridden here too
+# (they have sensible defaults in the config/ module).
