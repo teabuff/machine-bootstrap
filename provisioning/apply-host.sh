@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Apply a declarative host manifest (idempotent; safe to re-run).
-# Usage: sudo ./apply-host.sh <manifest>
+# Usage: sudo provisioning/apply-host.sh <manifest>
 set -euo pipefail
 
-[[ $# -eq 1 ]] || { echo "usage: sudo $0 <manifest>" >&2; exit 2; }
+[[ $# -eq 1 ]] || { echo "usage: sudo provisioning/apply-host.sh <manifest>" >&2; exit 2; }
 manifest=$1
 
 [[ $(id -u) -eq 0 ]] || { echo "run as root: sudo $0 $manifest" >&2; exit 1; }
@@ -12,8 +12,8 @@ manifest=$1
 # Fail fast on a malformed manifest before mutating anything.
 bash -n "$manifest" || { echo "manifest has syntax errors: $manifest" >&2; exit 1; }
 
-# shellcheck source=lib/declare.sh
-source "$(cd "$(dirname "$0")" && pwd)/lib/declare.sh"
+# shellcheck source=declare.sh
+source "$(cd "$(dirname "$0")" && pwd)/declare.sh"
 
 echo "==> applying $manifest"
 # shellcheck source=/dev/null

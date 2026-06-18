@@ -2,15 +2,10 @@
 .claude/
 docs/superpowers/
 
-# Private SSO realm config, declared identities, per-host manifests, and the
-# read-once secret/redirect state. Only the *.example.* templates are tracked.
-hosts/*.sso.conf
-hosts/*.sso.identity
-hosts/*.host
-!hosts/example.sso.conf
-!hosts/example.sso.identity
-!hosts/example.host
-.sso-state
+# Per-host declarative manifests (real ones carry private values). Only the
+# example template is tracked.
+provisioning/manifests/*.host
+!provisioning/manifests/example.host
 
 # Newt site connector — local secrets/credentials/state
 newt-site/.env

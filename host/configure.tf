@@ -9,7 +9,7 @@ resource "null_resource" "configure" {
   triggers = {
     admin_conf     = sha1(local.admin_conf)
     bootstrap      = filesha1("${path.module}/files/bootstrap.sh")
-    pang_bootstrap = filesha1("${path.module}/../lib/pang-bootstrap.sh")
+    pang_bootstrap = filesha1("${path.module}/lib/pang-bootstrap.sh")
   }
 
   connection {
@@ -30,7 +30,7 @@ resource "null_resource" "configure" {
     destination = "${var.stack_dir}/bootstrap.sh"
   }
   provisioner "file" {
-    source      = "${path.module}/../lib/pang-bootstrap.sh"
+    source      = "${path.module}/lib/pang-bootstrap.sh"
     destination = "${var.stack_dir}/lib/pang-bootstrap.sh"
   }
   provisioner "file" {

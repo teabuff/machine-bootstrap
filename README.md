@@ -10,7 +10,7 @@ caching with zero per-user setup.
 
 ```sh
 git clone <this-repo> && cd machine-bootstrap
-sudo ./bootstrap.sh
+sudo machine-setup/bootstrap.sh
 ```
 
 Idempotent — re-run any time (e.g. after adding users manually, or to converge
@@ -32,18 +32,18 @@ manual (direnv's security gate).
 
 ## Declarative host provisioning
 
-`apply-host.sh` converges a machine to a small declarative manifest — shared
-Unix groups (with fixed, cross-host GIDs), setgid group-owned `/data/<group>`
+`provisioning/apply-host.sh` converges a machine to a small declarative manifest —
+shared Unix groups (with fixed, cross-host GIDs), setgid group-owned `/data/<group>`
 directories, and enabled services:
 
 ```sh
-sudo ./apply-host.sh hosts/<name>.host
+sudo provisioning/apply-host.sh provisioning/manifests/<name>.host
 ```
 
 A manifest is a list of idempotent verbs (`group`, `dir`, `service`); see
-`hosts/example.host`. Re-run any time. Fixed GIDs keep `/data/<group>`
-ownership identical on every host, so users provisioned into a group share
-files cleanly. The engine is `lib/declare.sh`.
+`provisioning/manifests/example.host`. Re-run any time. Fixed GIDs keep
+`/data/<group>` ownership identical on every host, so users provisioned into a
+group share files cleanly. The engine is `provisioning/declare.sh`.
 
 Smoke test (needs Docker): `bash tests/smoke-apply-host.sh`.
 
@@ -108,14 +108,14 @@ resource (`pangolin ssh <user>@<host>-ssh`, alias `<host>.internal`) plus an
 optional public browser-SSH resource (`shell.<domain>`). A user authenticates
 with their Pocket ID identity, gets a 5-minute CA-signed cert, and is
 JIT-provisioned as a Linux user (= their email local-part, prefixed `p-`) with
-per-role RBAC: a fixed-GID Unix **group** (via `apply-host.sh`), scoped **sudo**
+per-role RBAC: a fixed-GID Unix **group** (via `provisioning/apply-host.sh`), scoped **sudo**
 (e.g. `ufw`), and a home dir. See [`host/SSH-ACCESS.md`](host/SSH-ACCESS.md).
 
 **`newt-site/`** is an optional add-on: a Dockerized [Newt](https://github.com/fosrl/newt)
 connector for a homelab/site host that self-registers with a provisioning key (and can
 continuously apply a resource blueprint). Not needed by the hub itself.
 
-> Why bash behind OpenTofu and not Terraform resources? There is no provider for Pangolin/
-> Pocket ID *application* objects (admin, OIDC client, IdP) — the closest, blueprint-declared
-> IdPs, is unshipped upstream (fosrl/pangolin#1895). So `host/` owns the infra-shaped,
-> stateful work and calls idempotent bash for the API dance.
+> Why some bash behind OpenTofu? The OIDC client (Pocket ID) and the IdP + org/role mapping
+> (Pangolin) are declarative via third-party providers in `idp/` and `access/`. Only two things
+> have no provider and stay as idempotent bash in `host/`: seeding the server admin and activating
+> the EE license — plus minting the Integration API key the `access/` provider authenticates with.

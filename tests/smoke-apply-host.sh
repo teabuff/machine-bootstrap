@@ -16,8 +16,8 @@ dir /data/app-dev root:app-dev 2775
 dir /data/app-ops root:app-ops 2775
 EOF
 
-  bash /repo/apply-host.sh "$m"   # first run: creates
-  bash /repo/apply-host.sh "$m"   # second run: idempotent, must not error
+  bash /repo/provisioning/apply-host.sh "$m"   # first run: creates
+  bash /repo/provisioning/apply-host.sh "$m"   # second run: idempotent, must not error
 
   for g in app-dev app-ops; do
     getent group "$g" >/dev/null || { echo "missing group $g"; exit 1; }
@@ -31,14 +31,14 @@ EOF
   # A pre-existing group at a different GID must warn (stderr), not clobber.
   groupadd --gid 7777 preexist
   m2=$(mktemp); echo "group preexist 8009" > "$m2"
-  warn=$(bash /repo/apply-host.sh "$m2" 2>&1 >/dev/null)
+  warn=$(bash /repo/provisioning/apply-host.sh "$m2" 2>&1 >/dev/null)
   echo "$warn" | grep -q "group preexist has GID 7777, declared 8009" \
     || { echo "BAD: expected GID-mismatch warning, got: $warn"; exit 1; }
   getent group preexist | grep -q ":7777:" || { echo "BAD: preexist GID changed"; exit 1; }
 
   # A syntax-error manifest must fail fast (bash -n) before any mutation.
   m3=$(mktemp); printf "group good 8050\nfi\n" > "$m3"
-  if bash /repo/apply-host.sh "$m3" >/dev/null 2>&1; then
+  if bash /repo/provisioning/apply-host.sh "$m3" >/dev/null 2>&1; then
     echo "BAD: syntax-error manifest should have failed"; exit 1
   fi
   if getent group good >/dev/null; then

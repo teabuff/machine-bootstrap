@@ -106,7 +106,7 @@ ownership stays consistent across hosts) — create them with the host manifest,
 which is not wired into `tofu` (run it once per host):
 
 ```
-sudo ./apply-host.sh hosts/<realm>.host     # e.g.  group developer 8002
+sudo provisioning/apply-host.sh provisioning/manifests/<realm>.host     # e.g.  group developer 8002
 ```
 
 newt applies the group membership + sudoers entry at *connection* time, so a

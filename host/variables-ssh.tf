@@ -46,6 +46,6 @@ variable "ssh_public_subdomain" {
 
 variable "ssh_sudo_commands" {
   type        = list(string)
-  description = "Absolute command paths the ssh_access_roles may run via sudo (sshSudoMode=commands), e.g. [\"/usr/sbin/ufw\"]. Empty = no sudo. Each SSH role also lands its JIT users in a fixed-GID Unix group named after the role, lower-cased (Developer -> `developer`) — create those groups via apply-host.sh (see hosts/example.host). Admin is implicit (full sudo) and managed separately."
+  description = "Absolute command paths the ssh_access_roles may run via sudo (sshSudoMode=commands), e.g. [\"/usr/sbin/ufw\"]. Empty = no sudo. Each SSH role also lands its JIT users in a fixed-GID Unix group named after the role, lower-cased (Developer -> `developer`) — create those groups via apply-host.sh (see provisioning/manifests/example.host). Admin is implicit (full sudo) and managed separately."
   default     = []
 }
