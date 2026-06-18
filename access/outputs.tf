@@ -24,9 +24,6 @@ output "ssh_newt_secret" {
 output "ssh_site_name" {
   value = local.ssh_enabled ? pangolin_site.host[0].name : null
 }
-output "ssh_site_nice_id" {
-  value = local.ssh_enabled ? pangolin_site.host[0].nice_id : null
-}
 
 # Scoped sudo is enforced box-side (ssh-host writes a sudoers drop-in), since the
 # provider can't set the Pangolin role's "commands" sudo mode. access/ is the single
