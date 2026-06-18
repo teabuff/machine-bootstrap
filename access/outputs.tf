@@ -27,3 +27,15 @@ output "ssh_site_name" {
 output "ssh_site_nice_id" {
   value = local.ssh_enabled ? pangolin_site.host[0].nice_id : null
 }
+
+# Scoped sudo is enforced box-side (ssh-host writes a sudoers drop-in), since the
+# provider can't set the Pangolin role's "commands" sudo mode. access/ is the single
+# source: it derives the policy, ssh-host/ enforces it.
+output "ssh_sudo_commands" {
+  description = "Absolute command paths the SSH roles may sudo (box sudoers, applied by ssh-host/)."
+  value       = local.ssh_enabled ? var.ssh_sudo_commands : []
+}
+output "ssh_sudo_groups" {
+  description = "Unix groups granted the scoped sudo (lower-cased SSH role names)."
+  value       = local.ssh_enabled ? [for r in local.ssh_roles : lower(r)] : []
+}
