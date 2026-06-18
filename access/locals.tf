@@ -38,5 +38,9 @@ locals {
   ssh_enabled   = var.enable_ssh_access
   ssh_roles     = local.ssh_enabled ? toset([for r in var.ssh_access_roles : r if r != "Admin"]) : toset([])
   ssh_site_name = var.ssh_site_name != "" ? var.ssh_site_name : "${split(".", local.host.base_domain)[0]}-host"
-  ssh_sudo_mode = length(var.ssh_sudo_commands) > 0 ? "commands" : "none"
+  # The stackopshq provider v1.4.0 only accepts none/full/restricted for ssh_sudo_mode,
+  # but the Pangolin API (ee-1.19.2) wants none/full/commands — no overlap for scoped
+  # command sudo. So Pangolin manages NO sudo here ("none"); the scoped dev-port sudo is
+  # a box sudoers drop-in in ssh-host/ (var.ssh_sudo_commands feeds that, not the role).
+  ssh_sudo_mode = "none"
 }

@@ -3,15 +3,51 @@
 # and role policy are created declaratively by access/; this script only runs the
 # newt connector with the creds access/ minted and trusts the org SSH CA.
 #
-# Usage: ssh-host.sh <stack_dir> <newt_version> <dashboard_url> <newt_id> <newt_secret>
+# Usage: ssh-host.sh <stack_dir> <newt_version> <dashboard_url> <newt_id> <newt_secret> [sudo_groups_csv] [sudo_cmds_csv]
+#   sudo_groups_csv / sudo_cmds_csv: optional. When both are set, a sudoers drop-in
+#   grants each unix group NOPASSWD sudo for exactly those commands (the scoped
+#   dev-port sudo — Pangolin's role sudo mode can't express it via the provider).
 set -euo pipefail
 STACK_DIR=${1:?stack_dir}
 NEWT_VERSION=${2:?newt_version}
 PANGOLIN_DASHBOARD_URL=${3:?dashboard_url}
 NEWT_ID=${4:?newt_id}
 NEWT_SECRET=${5:?newt_secret}
+SUDO_GROUPS=${6:-}
+SUDO_CMDS=${7:-}
 SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO="sudo"
 log() { printf '%s\n' "$*" >&2; }
+
+# Scoped sudo for SSH roles, as a validated sudoers drop-in. Each unix group gets
+# NOPASSWD for exactly the listed absolute command paths. Removed (not granted) when
+# either list is empty. Validated with `visudo -c`; rolled back if invalid.
+install_sudoers() {
+  local conf=/etc/sudoers.d/10-pangolin-ssh
+  local groups cmds g cmd_list
+  groups=$(printf '%s' "$SUDO_GROUPS" | tr ', ' '\n' | sed '/^$/d')
+  cmds=$(printf '%s' "$SUDO_CMDS" | tr ', ' '\n' | sed '/^$/d' | paste -sd, -)
+  if [ -z "$groups" ] || [ -z "$cmds" ]; then
+    $SUDO rm -f "$conf"
+    log "= no scoped SSH sudo (groups/cmds empty) — sudoers drop-in absent"
+    return 0
+  fi
+  local tmp; tmp=$(mktemp)
+  {
+    echo "# Managed by machine-bootstrap ssh-host.sh — scoped sudo for SSH roles."
+    while IFS= read -r g; do
+      [ -n "$g" ] && printf '%%%s ALL=(ALL) NOPASSWD: %s\n' "$g" "$cmds"
+    done <<< "$groups"
+  } > "$tmp"
+  if $SUDO visudo -cf "$tmp" >/dev/null 2>&1; then
+    $SUDO install -m 440 -o root -g root "$tmp" "$conf"
+    rm -f "$tmp"
+    log "= sudoers drop-in applied: groups [$(echo "$groups" | paste -sd, -)] -> $cmds"
+  else
+    rm -f "$tmp"
+    log "!! visudo rejected the generated sudoers — drop-in NOT applied"
+    return 1
+  fi
+}
 
 write_newt_env() {
   $SUDO install -d -m 700 /etc/newt
@@ -121,6 +157,7 @@ main() {
   write_newt_env
   newt_service
   install_dev_port
+  install_sudoers
   sshd_dropin
   log ""
   log "Box-side SSH wiring converged (newt connector + sshd CA trust)."

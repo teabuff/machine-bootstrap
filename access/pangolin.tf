@@ -21,8 +21,8 @@ resource "pangolin_role" "custom" {
   allow_ssh           = contains(local.ssh_roles, each.value)
   ssh_create_home_dir = contains(local.ssh_roles, each.value)
   ssh_unix_groups     = contains(local.ssh_roles, each.value) ? [lower(each.value), "systemd-journal"] : []
-  ssh_sudo_mode       = contains(local.ssh_roles, each.value) ? local.ssh_sudo_mode : "none"
-  ssh_sudo_commands   = contains(local.ssh_roles, each.value) ? var.ssh_sudo_commands : []
+  ssh_sudo_mode       = local.ssh_sudo_mode # "none" — scoped sudo is box-side (ssh-host)
+  ssh_sudo_commands   = []
 
   depends_on = [pangolin_org.main]
 }

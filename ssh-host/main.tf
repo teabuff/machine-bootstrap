@@ -7,6 +7,8 @@ resource "null_resource" "ssh_host" {
     newt_id      = local.newt_id
     sshd_port    = var.ssh_sshd_port
     stack_dir    = var.stack_dir
+    sudo_groups  = local.sudo_groups
+    sudo_cmds    = local.sudo_commands
   }
   connection {
     type        = "ssh"
@@ -26,7 +28,7 @@ resource "null_resource" "ssh_host" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x ${var.stack_dir}/ssh-host.sh",
-      "${var.stack_dir}/ssh-host.sh ${var.stack_dir} ${var.newt_version} '${local.dashboard}' '${local.newt_id}' '${local.newt_secret}'",
+      "${var.stack_dir}/ssh-host.sh ${var.stack_dir} ${var.newt_version} '${local.dashboard}' '${local.newt_id}' '${local.newt_secret}' '${local.sudo_groups}' '${local.sudo_commands}'",
     ]
   }
 }
