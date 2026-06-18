@@ -39,3 +39,8 @@ output "ssh_sudo_groups" {
   description = "Unix groups granted the scoped sudo (lower-cased SSH role names)."
   value       = local.ssh_enabled ? [for r in local.ssh_roles : lower(r)] : []
 }
+
+output "ssh_browser_url" {
+  description = "Public browser-SSH URL (blueprint-applied; null when disabled)."
+  value       = local.ssh_public_enabled ? "https://${local.ssh_public_domain}" : null
+}

@@ -43,4 +43,26 @@ locals {
   # command sudo. So Pangolin manages NO sudo here ("none"); the scoped dev-port sudo is
   # a box sudoers drop-in in ssh-host/ (var.ssh_sudo_commands feeds that, not the role).
   ssh_sudo_mode = "none"
+
+  # --- public browser-SSH (shell.) ---
+  ssh_public_enabled = local.ssh_enabled && var.ssh_public_subdomain != "" && var.ssh_public_domain_id != ""
+  ssh_public_domain  = "${var.ssh_public_subdomain}.${local.host.base_domain}"
+
+  # The browser-SSH (web terminal) resource is a `mode: ssh` PROXY resource, which
+  # the provider can't model (pangolin_resource is tcp/udp/http only) — so it's
+  # applied as a Pangolin blueprint (base64 JSON, the path the UI uses). See the
+  # terraform_data.ssh_browser TODO in ssh.tf.
+  ssh_browser_blueprint = base64encode(jsonencode({
+    "proxy-resources" = {
+      "${local.ssh_site_name}-browser-ssh" = {
+        name          = "${local.ssh_site_name} browser SSH"
+        mode          = "ssh"
+        "full-domain" = local.ssh_public_domain
+        ssl           = true
+        targets       = [{ site = try(pangolin_site.host[0].nice_id, ""), hostname = "127.0.0.1", port = var.ssh_sshd_port }]
+        auth          = { "sso-enabled" = true, "sso-roles" = sort(tolist(local.ssh_roles)) }
+        "auth-daemon" = { mode = "site", pam = "push" }
+      }
+    }
+  }))
 }
