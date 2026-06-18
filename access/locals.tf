@@ -32,3 +32,11 @@ locals {
   # Org membership: must return the org id (or true) to admit. Default = admit all.
   org_mapping = var.idp_org_mapping != "" ? var.idp_org_mapping : "'${local.org_id}'"
 }
+
+# --- Identity-aware SSH plane (gated by var.enable_ssh_access) ----------------
+locals {
+  ssh_enabled   = var.enable_ssh_access
+  ssh_roles     = local.ssh_enabled ? toset([for r in var.ssh_access_roles : r if r != "Admin"]) : toset([])
+  ssh_site_name = var.ssh_site_name != "" ? var.ssh_site_name : "${split(".", local.host.base_domain)[0]}-host"
+  ssh_sudo_mode = length(var.ssh_sudo_commands) > 0 ? "commands" : "none"
+}

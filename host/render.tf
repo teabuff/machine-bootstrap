@@ -37,7 +37,7 @@ locals {
   # Endpoints are loopback because configure runs ON the box (no public DNS/cert
   # needed at apply time). Avoid " and $ in the password.
   # Admin + license bootstrap config (loopback). Also carries PANGOLIN_DASHBOARD_URL
-  # + PANGOLIN_ORG_ID for ssh-access.sh, which drives the Pangolin API for SSH RBAC.
+  # + PANGOLIN_ORG_ID, consumed by the access/ plane via the org_id output.
   admin_conf = <<-EOT
     PANGOLIN_URL="http://127.0.0.1:3000"
     PANGOLIN_DASHBOARD_URL="https://${local.dashboard_host}"
