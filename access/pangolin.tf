@@ -16,9 +16,11 @@ resource "pangolin_role" "custom" {
   description = each.value
 
   # SSH RBAC — only for granted roles (never Admin); others get allow_ssh=false.
+  # systemd-journal: read access to the journal (`journalctl`) WITHOUT sudo — the
+  # standard ops "read the logs" grant (matches the legacy ssh-access.sh).
   allow_ssh           = contains(local.ssh_roles, each.value)
   ssh_create_home_dir = contains(local.ssh_roles, each.value)
-  ssh_unix_groups     = contains(local.ssh_roles, each.value) ? [lower(each.value)] : []
+  ssh_unix_groups     = contains(local.ssh_roles, each.value) ? [lower(each.value), "systemd-journal"] : []
   ssh_sudo_mode       = contains(local.ssh_roles, each.value) ? local.ssh_sudo_mode : "none"
   ssh_sudo_commands   = contains(local.ssh_roles, each.value) ? var.ssh_sudo_commands : []
 
