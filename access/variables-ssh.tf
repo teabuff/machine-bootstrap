@@ -29,7 +29,10 @@ variable "ssh_sshd_port" {
   default     = 22
 }
 variable "ssh_public_domain_id" {
-  type        = string
+  type = string
+  # NB: today this only gates ssh_public_enabled — the blueprint keys off `full-domain`,
+  # not the id. It's kept as the required presence signal AND for the future
+  # pangolin_blueprint RESOURCE (see ssh.tf TODO), which will need the actual id.
   description = "Pangolin domain_id for the public browser-SSH subdomain. Set (with ssh_public_subdomain) to expose browser-SSH at <subdomain>.<base_domain>."
   default     = ""
 }
