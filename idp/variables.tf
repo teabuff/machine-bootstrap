@@ -34,3 +34,15 @@ variable "host_state_config" {
     path = "../host/terraform.tfstate"
   }
 }
+
+variable "issue_enrollment_links" {
+  type        = bool
+  description = "Mint a one-time Pocket ID login link per user so first-time users can self-enrol a passkey (the only Pocket ID step that can't be declared). Off = no links."
+  default     = true
+}
+
+variable "enrollment_link_ttl" {
+  type        = string
+  description = "Lifetime of each enrolment link (Go duration, e.g. 24h, 72h). The link is also single-use (consumed on first login)."
+  default     = "72h"
+}
