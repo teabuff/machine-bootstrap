@@ -46,3 +46,38 @@ variable "enrollment_link_ttl" {
   description = "Lifetime of each enrolment link (Go duration, e.g. 24h, 72h). The link is also single-use (consumed on first login)."
   default     = "72h"
 }
+
+# --- SMTP / email login (optional) -------------------------------------------
+# Set smtp_host to turn on Pocket ID email: users self-serve a one-time login link
+# by entering their email at the login page (then enrol a passkey) — no admin relay.
+# Leave smtp_host = "" to keep email off and use the enrollment_links output instead.
+# Secrets (smtp_password) via TF_VAR_. application_config is a merge (it preserves
+# fields you don't set), so this only touches the SMTP + email-login settings.
+variable "smtp_host" {
+  type        = string
+  description = "SMTP server host. Empty = email off."
+  default     = ""
+}
+variable "smtp_port" {
+  type    = string
+  default = "587"
+}
+variable "smtp_from" {
+  type        = string
+  description = "Sender address for Pocket ID emails (required when smtp_host is set)."
+  default     = ""
+}
+variable "smtp_user" {
+  type    = string
+  default = ""
+}
+variable "smtp_password" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+variable "smtp_tls" {
+  type        = string
+  description = "SMTP TLS mode: none | starttls | tls."
+  default     = "starttls"
+}
